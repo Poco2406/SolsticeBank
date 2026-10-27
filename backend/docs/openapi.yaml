@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: SOLSTICE BANK API
+  version: 0.1.0
+  description: >
+    API de la banque fictive SOLSTICE BANK. Tous les montants sont en centimes
+    (12345 = 123,45 €). Démonstration, argent fictif.
+servers:
+  - url: http://localhost:3000
+tags:
+  - name: Santé
+  - name: Authentification
+
+paths:
+  /api/health:
+    get:
+      tags: [Santé]
+      summary: Vérifier que l'API répond
+      security: []
+      responses:
+        "200":
+          description: API opérationnelle
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+
+  /api/auth/register:
+    post:
+      tags: [Authentification]
+      summary: Créer un compte
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "201":
+          description: Compte créé, JWT renvoyé
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "409":
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                error:
+                  {
+                    code: EMAIL_ALREADY_USED,
+                    message: Cet email est déjà utilisé.,
+                  }
+
+  /api/auth/login:
+    post:
+      tags: [Authentification]
+      summary: Se connecter
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "200":
+          description: Connexion réussie, JWT renvoyé
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                [
+                  INVALID_INPUT,
+                  UNAUTHORIZED,
+                  FORBIDDEN,
+                  NOT_FOUND,
+                  CONFLICT,
+                  EMAIL_ALREADY_USED,
+                  INSUFFICIENT_FUNDS,
+                  INTERNAL_ERROR,
+                ]
+            message: { type: string }
+
+    Credentials:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: alice@example.test }
+        password: { type: string, minLength: 8, example: MotDePasse123! }
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          type: object
+          required: [id, email]
+          properties:
+            id: { type: string, example: 507f1f77bcf86cd799439011 }
+            email: { type: string, example: alice@example.test }
+        token: { type: string, description: JWT signé }
+
+  responses:
+    InvalidInput:
+      description: Corps, champ ou identifiant invalide
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              {
+                code: INVALID_INPUT,
+                message: "password : 8 caractères minimum",
+              }
+    Unauthorized:
+      description: JWT absent, invalide ou expiré, ou identifiants incorrects
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error: { code: UNAUTHORIZED, message: Authentification requise. }
+    NotFound:
+      description: Ressource absente ou appartenant à un autre utilisateur
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error: { code: NOT_FOUND, message: Ressource introuvable. }
+
+# Par défaut, toute route exige un JWT. Les routes publiques mettent « security: [] ».
+security:
+  - bearerAuth: []
