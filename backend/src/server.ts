@@ -1,22 +1,15 @@
-import "dotenv/config";
 import mongoose from "mongoose";
+import { env } from "./config/env.js";
 import { createApp } from "./app.js";
 
 async function start() {
-  const mongoUri = process.env.MONGODB_URI;
-
-  if (!mongoUri) {
-    throw new Error("La variable MONGODB_URI est manquante.");
-  }
-
-  await mongoose.connect(mongoUri);
+  await mongoose.connect(env.mongodbUri);
   console.log("Connexion à MongoDB réussie.");
 
   const app = createApp();
-  const port = Number(process.env.PORT ?? 3000);
 
-  app.listen(port, "localhost", () => {
-    console.log(`API disponible sur http://localhost:${port}`);
+  app.listen(env.port, "localhost", () => {
+    console.log(`API disponible sur http://localhost:${env.port}`);
   });
 }
 

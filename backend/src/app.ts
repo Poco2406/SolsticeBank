@@ -1,15 +1,11 @@
 import express from "express";
 import cors from "cors";
+import { env } from "./config/env.js";
 
 export function createApp() {
   const app = express();
 
-  app.use(
-    cors({
-      origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
-    }),
-  );
-
+  app.use(cors({ origin: env.frontendUrl }));
   app.use(express.json());
 
   // Route de vérification imposée par le livret.
