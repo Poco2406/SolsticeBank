@@ -1,10 +1,9 @@
-import mongoose from "mongoose";
 import { env } from "./config/env.js";
+import { connectDb } from "./config/db.js";
 import { createApp } from "./app.js";
 
 async function start() {
-  await mongoose.connect(env.mongodbUri);
-  console.log("Connexion à MongoDB réussie.");
+  await connectDb(env.mongodbUri);
 
   const app = createApp();
 
