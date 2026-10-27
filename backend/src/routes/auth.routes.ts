@@ -3,6 +3,8 @@ import { z } from "zod";
 import { validateBody } from "../middlewares/validate.js";
 import { emailSchema } from "../validation/common.js";
 import * as auth from "../services/auth.service.js";
+import { verificationRouter } from "./verification.routes.js";
+import { passwordRouter } from "./password.routes.js";
 
 const credentials = z.object({ email: emailSchema, password: z.string().min(8) }).strict();
 
@@ -15,3 +17,7 @@ authRouter.post("/register", validateBody(credentials), async (req, res) => {
 authRouter.post("/login", validateBody(credentials), async (req, res) => {
     res.status(200).json(await auth.login(req.body.email, req.body.password));
 });
+
+authRouter.use("/verification", verificationRouter);
+
+authRouter.use("/password", passwordRouter);
