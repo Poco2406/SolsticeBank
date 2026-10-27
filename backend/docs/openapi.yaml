@@ -10,6 +10,7 @@ servers:
 tags:
   - name: Santé
   - name: Authentification
+  - name: Transactions
 
 paths:
   /api/health:
@@ -75,6 +76,117 @@ paths:
               schema: { $ref: "#/components/schemas/AuthResponse" }
         "400": { $ref: "#/components/responses/InvalidInput" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/transactions:
+    get:
+      tags: [Transactions]
+      summary: Récupérer les transactions de l'utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Non authentifié
+
+    post:
+      tags: [Transactions]
+      summary: Créer une transaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Transaction créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Données invalides
+        "401":
+          description: Non authentifié
+
+  /api/transactions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[0-9a-fA-F]{24}$"
+
+    get:
+      tags: [Transactions]
+      summary: Récupérer une transaction par son ID
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transaction trouvée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Identifiant invalide
+        "401":
+          description: Non authentifié
+        "404":
+          description: Transaction introuvable
+
+    patch:
+      tags: [Transactions]
+      summary: Modifier une transaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdate"
+      responses:
+        "200":
+          description: Transaction modifiée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Données ou identifiant invalides
+        "401":
+          description: Non authentifié
+        "404":
+          description: Transaction introuvable
+
+    delete:
+      tags: [Transactions]
+      summary: Supprimer une transaction
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Transaction supprimée
+        "400":
+          description: Identifiant invalide
+        "401":
+          description: Non authentifié
+        "404":
+          description: Transaction introuvable
 
 components:
   securitySchemes:
@@ -126,6 +238,76 @@ components:
             id: { type: string, example: 507f1f77bcf86cd799439011 }
             email: { type: string, example: alice@example.test }
         token: { type: string, description: JWT signé }
+
+    TransactionInput:
+      type: object
+      additionalProperties: false
+      required: [label, amount, type, date]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: Courses
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+          description: Montant en centimes
+          example: 2500
+        type:
+          type: string
+          enum: [income, expense]
+          example: expense
+        date:
+          type: string
+          format: date
+          example: "2026-10-27"
+
+    TransactionUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+
+    Transaction:
+      type: object
+      required: [id, ownerId, label, amount, type, date]
+      properties:
+        id:
+          type: string
+          example: "671f5a2b8c9d123456789abc"
+        ownerId:
+          type: string
+          example: "671f5a2b8c9d123456789def"
+        label:
+          type: string
+          example: Courses
+        amount:
+          type: integer
+          description: Montant en centimes
+          example: 2500
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+          example: "2026-10-27"
 
   responses:
     InvalidInput:
