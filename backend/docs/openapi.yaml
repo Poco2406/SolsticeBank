@@ -23,6 +23,7 @@ tags:
   - name: Transactions
   - name: Compte bancaire
   - name: Historique
+  - name: Virements
 
 security:
   - bearerAuth: []
@@ -629,6 +630,57 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+
+  # ---------------------------------------------------------------- Virements
+  /api/transfers:
+    post:
+      tags: [Virements]
+      summary: Effectuer un virement bancaire
+      description: >
+        Effectue un virement entre deux comptes actifs.
+        Le débit, le crédit, les deux mouvements et le reçu
+        sont enregistrés dans une transaction MongoDB atomique.
+        La clé d'idempotence évite les doubles virements.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [recipientIban, amountCents]
+              properties:
+                recipientIban:
+                  type: string
+                  pattern: "^FR[0-9]{25}$"
+                  example: FR7630006000011234567890189
+                amountCents:
+                  type: integer
+                  minimum: 1
+                  maximum: 9007199254740991
+                  example: 5000
+      responses:
+        "201":
+          description: Virement effectué
+        "200":
+          description: Virement déjà effectué (idempotence)
+        "400":
+          $ref: "#/components/responses/InvalidInput"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Solde insuffisant, compte inactif ou conflit d'idempotence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erreur interne
 
 components:
   securitySchemes:
