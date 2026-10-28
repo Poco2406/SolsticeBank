@@ -80,10 +80,15 @@
   }
 }
 
+/* Centré, même largeur que la carte du solde et les boutons */
 .encadre {
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 20px;
   background: var(--lavande);
+  text-align: center;
 
   h2 {
     margin-bottom: 12px;
