@@ -12,11 +12,41 @@ function Connexion() {
   const [motDePasse, setMotDePasse] = useState('')
   const [afficherMotDePasse, setAfficherMotDePasse] = useState(false)
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    // Simulation frontend uniquement
+  
+async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  e.preventDefault()
+
+  try {
+    const response = await fetch('http://localhost:3000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password: motDePasse,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      alert(data.error?.message ?? 'Identifiants incorrects.')
+      return
+    }
+
+    if (!data.token) {
+      alert('Aucun jeton de connexion reçu.')
+      return
+    }
+
+    sessionStorage.setItem('solsticeToken', data.token)
     navigate('/accueil')
+  } catch {
+    alert('Impossible de contacter le serveur.')
   }
+}
+
 
   return (
     <main className="connexion-page">

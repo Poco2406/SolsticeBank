@@ -1,4 +1,5 @@
-import { useState } from 'react'
+
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import Entete from '../components/Entete'
@@ -9,7 +10,6 @@ type Etape = 'saisie' | 'termine'
 
 const MOTIF_MAX = 140
 
-// « FR7630006000011234567890189 » → « FR76 3000 6000 0112 3456 7890 189 »
 function formaterIban(valeur: string) {
   return valeur
     .replace(/\s/g, '')
@@ -19,7 +19,10 @@ function formaterIban(valeur: string) {
 }
 
 function formaterMontant(montant: number) {
-  return montant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  return montant.toLocaleString('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+  })
 }
 
 function Transfert() {
@@ -28,16 +31,104 @@ function Transfert() {
   const [montant, setMontant] = useState('')
   const [motif, setMotif] = useState('')
   const [modaleOuverte, setModaleOuverte] = useState(false)
+  const [envoiEnCours, setEnvoiEnCours] = useState(false)
+  const [erreur, setErreur] = useState('')
 
-  function handleSubmit(e: FormEvent) {
+  // Conserver la clé en cas de nouvelle tentative.
+  const cleVirement = useRef<string | null>(null)
+  const envoiVerrouille = useRef(false)
+
+  function reinitialiserDemande() {
+    cleVirement.current = null
+    setErreur('')
+  }
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+
+    if (envoiVerrouille.current) return
+
+    setErreur('')
     setModaleOuverte(true)
   }
 
-  function confirmer() {
-    // TODO : envoyer le transfert au backend, puis passer à 'termine' seulement si tout s'est bien passé
-    setModaleOuverte(false)
-    setEtape('termine')
+  async function confirmer() {
+    if (envoiVerrouille.current) return
+
+    setErreur('')
+
+    const token = sessionStorage.getItem('solsticeToken')
+
+    if (!token) {
+      setErreur('Vous devez être connecté pour effectuer un virement.')
+      return
+    }
+
+    const montantEuros = Number(montant)
+    const montantExact = montantEuros * 100
+    const amountCents = Math.round(montantExact)
+    const recipientIban = destinataire.replace(/\s/g, '').toUpperCase()
+
+    if (
+      !Number.isFinite(montantEuros) ||
+      !Number.isSafeInteger(amountCents) ||
+      amountCents <= 0 ||
+      Math.abs(montantExact - amountCents) > 0.000001
+    ) {
+      setErreur(
+        'Le montant doit être valide et comporter au maximum deux décimales.',
+      )
+      return
+    }
+
+    if (!/^FR\d{25}$/.test(recipientIban)) {
+      setErreur('Veuillez saisir un IBAN français valide.')
+      return
+    }
+
+    envoiVerrouille.current = true
+    setEnvoiEnCours(true)
+
+    const key = cleVirement.current ?? crypto.randomUUID()
+    cleVirement.current = key
+
+    try {
+      const response = await fetch(
+        'http://localhost:3000/api/transfers',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            'Idempotency-Key': key,
+          },
+          body: JSON.stringify({
+            recipientIban,
+            amountCents,
+          }),
+        },
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setErreur(data.error?.message ?? 'Le virement a été refusé.')
+        return
+      }
+
+      // Afficher la réussite uniquement après confirmation de l'API.
+      setModaleOuverte(false)
+      setEtape('termine')
+      cleVirement.current = null
+    } catch {
+      // Ne pas changer la clé : le serveur peut avoir reçu le virement.
+      setErreur(
+        'Impossible de confirmer le résultat. Réessayez avec la même demande.',
+      )
+    } finally {
+      envoiVerrouille.current = false
+      setEnvoiEnCours(false)
+    }
   }
 
   function nouveauTransfert() {
@@ -45,6 +136,7 @@ function Transfert() {
     setMontant('')
     setMotif('')
     setEtape('saisie')
+    reinitialiserDemande()
   }
 
   return (
@@ -72,7 +164,10 @@ function Transfert() {
                   step="0.01"
                   placeholder="0,00"
                   value={montant}
-                  onChange={(e) => setMontant(e.target.value)}
+                  onChange={(e) => {
+                    setMontant(e.target.value)
+                    reinitialiserDemande()
+                  }}
                   required
                   autoFocus
                 />
@@ -86,7 +181,10 @@ function Transfert() {
                 type="text"
                 placeholder="FR76 0000 0000 0000 0000 0000 000"
                 value={formaterIban(destinataire)}
-                onChange={(e) => setDestinataire(e.target.value.replace(/\s/g, ''))}
+                onChange={(e) => {
+                  setDestinataire(e.target.value.replace(/\s/g, ''))
+                  reinitialiserDemande()
+                }}
                 maxLength={42}
                 required
               />
@@ -116,15 +214,21 @@ function Transfert() {
 
         {etape === 'termine' && (
           <section className="carte-transfert succes apparition">
-            <svg className="coche" viewBox="0 0 52 52" aria-hidden="true">
+            <svg
+              className="coche"
+              viewBox="0 0 52 52"
+              aria-hidden="true"
+            >
               <circle cx="26" cy="26" r="24" />
               <path d="M15 27 l7 7 l15 -15" />
             </svg>
+
             <h2>Transfert envoyé</h2>
             <p>
               {formaterMontant(Number(montant))} ont été envoyés à{' '}
               {formaterIban(destinataire)}.
             </p>
+
             <div className="actions-transfert">
               <button
                 type="button"
@@ -133,6 +237,7 @@ function Transfert() {
               >
                 Nouveau transfert
               </button>
+
               <Link to="/accueil" className="bouton">
                 Retour à l'accueil
               </Link>
@@ -141,7 +246,10 @@ function Transfert() {
         )}
 
         {etape !== 'termine' && (
-          <Link to="/accueil" className="lien-retour apparition">
+          <Link
+            to="/accueil"
+            className="lien-retour apparition"
+          >
             ← Retour à l'accueil
           </Link>
         )}
@@ -149,12 +257,18 @@ function Transfert() {
 
       <Modale
         ouverte={modaleOuverte}
-        onFermer={() => setModaleOuverte(false)}
+        onFermer={() => {
+          if (!envoiVerrouille.current) {
+            setModaleOuverte(false)
+          }
+        }}
         titre="Confirmer le virement"
       >
         <div>
           <p className="recap-titre">Vous allez envoyer</p>
-          <p className="recap-montant">{formaterMontant(Number(montant))}</p>
+          <p className="recap-montant">
+            {formaterMontant(Number(montant))}
+          </p>
         </div>
 
         <dl className="recap">
@@ -162,6 +276,7 @@ function Transfert() {
             <dt>À</dt>
             <dd>{formaterIban(destinataire)}</dd>
           </div>
+
           {motif && (
             <div>
               <dt>Motif</dt>
@@ -174,16 +289,31 @@ function Transfert() {
           Un virement confirmé ne peut pas être annulé.
         </p>
 
+        {erreur && (
+          <p role="alert" style={{ color: '#dc2626' }}>
+            {erreur}
+          </p>
+        )}
+
         <div className="actions-transfert">
           <button
             type="button"
             className="bouton bouton-secondaire"
             onClick={() => setModaleOuverte(false)}
+            disabled={envoiEnCours}
           >
             Annuler
           </button>
-          <button type="button" className="bouton" onClick={confirmer}>
-            Confirmer le virement
+
+          <button
+            type="button"
+            className="bouton"
+            onClick={confirmer}
+            disabled={envoiEnCours}
+          >
+            {envoiEnCours
+              ? 'Virement en cours...'
+              : 'Confirmer le virement'}
           </button>
         </div>
       </Modale>
