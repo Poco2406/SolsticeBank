@@ -8,6 +8,7 @@ import { accountRouter } from "./routes/account.routes.js";
 import { docsRouter } from "./docs/swagger.js";
 import { usersRouter } from "./routes/users.routes.js";
 import { meRouter } from "./routes/me.routes.js";
+import { transferRouter } from "./routes/transfer.routes.js";
 import { movementsRouter } from "./routes/movements.routes.js";
 
 export function createApp() {
@@ -27,6 +28,7 @@ export function createApp() {
   app.use("/api/account", accountRouter);
   app.use("/api/movements", movementsRouter);
   app.use("/api/transactions", transactionRouter);
+  app.use("/api/transfers", transferRouter);
   app.use("/api/docs", docsRouter);
 
   app.use(notFoundHandler);
