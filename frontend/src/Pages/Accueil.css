@@ -75,3 +75,121 @@
     text-align: center;
   }
 }
+
+/* ---------- Animations ---------- */
+
+/* Les blocs apparaissent l'un après l'autre en glissant vers le haut */
+.apparition {
+  animation: glisser-haut 0.5s ease-out both;
+}
+
+.accueil-contenu > .apparition:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.accueil-contenu > .apparition:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.accueil-contenu > .apparition:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+@keyframes glisser-haut {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Petite main qui salue */
+.salut {
+  display: inline-block;
+  transform-origin: 70% 70%;
+  animation: saluer 1.2s ease-in-out 0.6s 2;
+}
+
+@keyframes saluer {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(18deg);
+  }
+  40%,
+  80% {
+    transform: rotate(-10deg);
+  }
+}
+
+/* Carte du solde qui se soulève au survol */
+.carte-solde {
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(109, 40, 217, 0.25);
+  }
+}
+
+.carte-solde-haut {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bouton-masquer {
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--blanc);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Le montant se floute quand on le masque */
+.carte-solde-montant {
+  transition: filter 0.3s;
+  font-variant-numeric: tabular-nums;
+
+  &.masque {
+    filter: blur(10px);
+    user-select: none;
+  }
+}
+
+/* Boutons qui se soulèvent au survol et s'enfoncent au clic */
+.accueil .bouton {
+  transition:
+    background 0.2s,
+    transform 0.15s;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+  &:active {
+    transform: translateY(0) scale(0.97);
+  }
+}
+
+/* Désactive les animations si l'utilisateur l'a demandé dans son système */
+@media (prefers-reduced-motion: reduce) {
+  .accueil *,
+  .accueil *::before,
+  .accueil *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

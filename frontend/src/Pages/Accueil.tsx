@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useCompteur } from '../hooks/useCompteur'
 import './Accueil.css'
 
 // TODO : remplacer par les données du client récupérées depuis le backend
@@ -8,6 +10,9 @@ const client = {
 }
 
 function Accueil() {
+  const [soldeVisible, setSoldeVisible] = useState(true)
+  const soldeAnime = useCompteur(client.solde)
+
   return (
     <div className="accueil">
       <header className="entete">
@@ -18,19 +23,34 @@ function Accueil() {
       </header>
 
       <main className="accueil-contenu">
-        <h1>Bonjour {client.prenom}</h1>
+        <h1 className="apparition">
+          Bonjour {client.prenom} <span className="salut"></span>
+        </h1>
 
-        <section className="carte-solde">
-          <p className="carte-solde-titre">Solde du compte</p>
-          <p className="carte-solde-montant">
-            {client.solde.toLocaleString('fr-FR', {
+        <section className="carte-solde apparition">
+          <div className="carte-solde-haut">
+            <p className="carte-solde-titre">Solde du compte</p>
+            <button
+              type="button"
+              className="bouton-masquer"
+              onClick={() => setSoldeVisible((visible) => !visible)}
+              aria-pressed={!soldeVisible}
+            >
+              {soldeVisible ? 'Masquer' : 'Afficher'}
+            </button>
+          </div>
+          <p
+            className={`carte-solde-montant ${soldeVisible ? '' : 'masque'}`}
+            aria-hidden={!soldeVisible}
+          >
+            {soldeAnime.toLocaleString('fr-FR', {
               style: 'currency',
               currency: 'EUR',
             })}
           </p>
         </section>
 
-        <section className="actions">
+        <section className="actions apparition">
           <Link to="/transfert" className="bouton">
             Faire un transfert
           </Link>
@@ -39,7 +59,7 @@ function Accueil() {
           </Link>
         </section>
 
-        <section className="encadre">
+        <section className="encadre apparition">
           <h2>Dernières opérations</h2>
           {/* TODO : afficher les dernières opérations depuis le backend */}
           <p className="vide">Aucune opération pour le moment.</p>
