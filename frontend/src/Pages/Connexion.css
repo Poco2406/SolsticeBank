@@ -156,16 +156,21 @@
 
 /* Inscription et pied de page */
 
+.connexion-register a {
+  color: #6D28D9;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.connexion-register a:hover {
+  text-decoration: underline;
+}
+
 .connexion-register {
   text-align: center;
   margin: 28px 0 0;
   font-size: 13px;
   color: #6B7280;
-}
-
-.connexion-register span {
-  color: #6D28D9;
-  font-weight: 600;
 }
 
 .connexion-footer {

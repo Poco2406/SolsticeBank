@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import logoSolstice from '../assets/SolsticeBank.png'
 import './Connexion.css'
+import { Link } from 'react-router-dom'
 
 function Connexion() {
   const navigate = useNavigate()
@@ -92,8 +93,8 @@ function Connexion() {
           </form>
 
           <p className="connexion-register">
-            Vous n'avez pas de compte ?
-            <span> S'inscrire</span>
+            Vous n'avez pas de compte ?{' '}
+            <Link to="/inscription">S'inscrire</Link>
           </p>
         </section>
 
