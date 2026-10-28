@@ -1,4 +1,4 @@
-import { Schema, model, type InferSchemaType } from "mongoose";
+import { Schema, model, type InferSchemaType, type HydratedDocument } from "mongoose";
 
 const addressSchema = new Schema(
     {
@@ -45,4 +45,5 @@ userSchema.index(
 );
 
 export type UserDoc = InferSchemaType<typeof userSchema>;
+export type UserDocument = HydratedDocument<UserDoc>;
 export const User = model("User", userSchema);

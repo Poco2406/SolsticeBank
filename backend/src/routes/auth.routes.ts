@@ -5,13 +5,19 @@ import { emailSchema } from "../validation/common.js";
 import * as auth from "../services/auth.service.js";
 import { verificationRouter } from "./verification.routes.js";
 import { passwordRouter } from "./password.routes.js";
+import { fullProfileSchema } from "../validation/profile.js";
 
 const credentials = z.object({ email: emailSchema, password: z.string().min(8) }).strict();
 
 export const authRouter = Router();
 
-authRouter.post("/register", validateBody(credentials), async (req, res) => {
-    res.status(201).json(await auth.register(req.body.email, req.body.password));
+const registerSchema = z
+  .object({ email: emailSchema, password: z.string().min(8), profile: fullProfileSchema.optional() })
+  .strict(); 
+
+authRouter.post("/register", validateBody(registerSchema), async (req, res) => {
+  const { email, password, profile } = req.body;
+  res.status(201).json(await auth.register(email, password, profile));
 });
 
 authRouter.post("/login", validateBody(credentials), async (req, res) => {
