@@ -27,7 +27,8 @@ const userSchema = new Schema(
         phone: { type: String, trim: true, default: null }, // format international, ex. +33612345678
 
         // État du compte
-        status: { type: String, enum: ["pending", "active", "closed"], default: "pending" },
+        // Pas de vérification d'email obligatoire : un compte est actif dès l'inscription.
+        status: { type: String, enum: ["active", "closed"], default: "active" },
         emailVerifiedAt: { type: Date, default: null },
         tokenVersion: { type: Number, default: 0 },
     },
