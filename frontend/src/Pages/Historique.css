@@ -1,0 +1,288 @@
+/* Toute la page sur une colonne centrée */
+.historique > * {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+.historique-titre {
+  text-align: center;
+
+  p {
+    margin-top: 8px;
+    color: var(--gris-texte);
+  }
+}
+
+/* ---------- Résumé entrées / sorties ---------- */
+
+.resume {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.resume-carte {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--blanc);
+  box-shadow: var(--ombre);
+  text-align: center;
+
+  p:first-child {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gris-texte);
+  }
+}
+
+.resume-montant {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Les entrées d'argent sont en violet partout sur la page */
+.entree {
+  color: var(--violet);
+}
+
+/* ---------- Filtres et recherche ---------- */
+
+.outils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filtres {
+  display: flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--lavande);
+
+  button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--gris-fonce);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      color 0.2s;
+
+    &.actif {
+      background: var(--violet);
+      color: var(--blanc);
+    }
+  }
+}
+
+.recherche {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--blanc);
+  color: var(--gris-fonce);
+  font-size: 15px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--violet);
+    box-shadow: 0 0 0 4px var(--lavande);
+  }
+}
+
+/* ---------- Liste des opérations ---------- */
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.liste-vide {
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--lavande);
+  color: var(--gris-texte);
+  text-align: center;
+}
+
+.jour-titre {
+  margin-bottom: 8px;
+  padding-left: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gris-texte);
+
+  /* « lundi 27 octobre » → « Lundi 27 octobre » */
+  &::first-letter {
+    text-transform: uppercase;
+  }
+}
+
+.jour ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 16px;
+  background: var(--blanc);
+  box-shadow: var(--ombre);
+  overflow: hidden;
+
+  li {
+    animation: glisser-haut 0.4s ease-out both;
+  }
+
+  li + li {
+    border-top: 1px solid var(--lavande);
+  }
+}
+
+.operation {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--blanc-casse);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--violet);
+    outline-offset: -2px;
+  }
+}
+
+.operation-icone {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--blanc-casse);
+  color: var(--gris-fonce);
+  font-weight: 700;
+
+  &.entree {
+    background: var(--lavande);
+  }
+}
+
+.operation-texte {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.operation-libelle {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operation-categorie {
+  color: var(--gris-texte);
+  font-size: 13px;
+}
+
+.operation-montant {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Détail (modale) ---------- */
+
+.detail-montant {
+  text-align: center;
+  font-size: 40px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  margin: 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--lavande);
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+  }
+
+  div + div {
+    border-top: 1px solid var(--border);
+  }
+
+  dt {
+    color: var(--gris-texte);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  /* « lundi 27 octobre » → « Lundi 27 octobre » */
+  dd::first-letter {
+    text-transform: uppercase;
+  }
+}
+
+.modale .bouton {
+  text-align: center;
+}
+
+.historique .lien-retour {
+  width: auto;
+  align-self: center;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 600px) {
+  .filtres {
+    width: 100%;
+
+    button {
+      flex: 1;
+    }
+  }
+
+  .resume-montant {
+    font-size: 20px;
+  }
+}

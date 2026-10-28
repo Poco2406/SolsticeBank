@@ -8,14 +8,29 @@
 }
 
 .logo {
-  color: var(--violet);
-  font-size: 22px;
-  font-weight: 700;
-  text-decoration: none;
+  display: flex;
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: scale(1.04);
+  }
+}
+
+/* Même logo que les pages Connexion et Inscription, en plus petit */
+.logo-image {
+  display: block;
+  width: 120px;
+  height: 64px;
+  object-fit: contain;
 }
 
 @media (max-width: 600px) {
   .entete {
     padding-inline: 16px;
+  }
+
+  .logo-image {
+    width: 96px;
+    height: 52px;
   }
 }

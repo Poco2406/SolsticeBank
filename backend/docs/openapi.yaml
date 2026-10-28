@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.4.0
+  version: 0.5.0
   description: >
     API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
     Tous les montants sont des entiers en centimes (12345 = 123,45 €).
@@ -22,6 +22,7 @@ tags:
   - name: Annuaire
   - name: Transactions
   - name: Compte bancaire
+  - name: Historique
 
 security:
   - bearerAuth: []
@@ -562,6 +563,72 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  # ---------------------------------------------------------------- Historique
+  /api/movements:
+    get:
+      tags: [Historique]
+      summary: Historique des mouvements de son compte (filtré, paginé)
+      description: >
+        Renvoie uniquement les mouvements de l'utilisateur connecté, du plus récent au plus ancien.
+        Tous les filtres sont facultatifs et se cumulent. Les dates from/to sont des jours
+        civils à l'heure de Paris, bornes incluses. Paramètre inconnu ou invalide : 400.
+        Profil incomplet : 403.
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [deposit, withdrawal] }
+        - name: from
+          in: query
+          description: Premier jour inclus (YYYY-MM-DD), antérieur ou égal à to.
+          schema: { type: string, format: date, example: "2026-10-01" }
+        - name: to
+          in: query
+          description: Dernier jour inclus (YYYY-MM-DD).
+          schema: { type: string, format: date, example: "2026-10-31" }
+        - name: minAmountCents
+          in: query
+          description: Montant minimum inclus, en centimes, inférieur ou égal à maxAmountCents.
+          schema: { type: integer, minimum: 1 }
+        - name: maxAmountCents
+          in: query
+          description: Montant maximum inclus, en centimes.
+          schema: { type: integer, minimum: 1 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Résultats paginés (items vide si aucun mouvement)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MovementList" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/movements/{id}:
+    get:
+      tags: [Historique]
+      summary: Détail d'un mouvement
+      description: 404 si le mouvement n'existe pas ou appartient à un autre utilisateur.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200":
+          description: Mouvement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Movement" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
 components:
   securitySchemes:
@@ -873,10 +940,9 @@ components:
 
     Movement:
       type: object
+      required: [id, accountId, operationId, type, amountCents, balanceAfterCents, createdAt]
       properties:
-        _id:
-          type: string
-        ownerId:
+        id:
           type: string
         accountId:
           type: string
@@ -894,6 +960,17 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    MovementList:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Movement" }
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 42 }
 
     AccountOperationResult:
       type: object
