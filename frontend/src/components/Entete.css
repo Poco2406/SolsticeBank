@@ -1,0 +1,21 @@
+.entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--blanc);
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  color: var(--violet);
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .entete {
+    padding-inline: 16px;
+  }
+}

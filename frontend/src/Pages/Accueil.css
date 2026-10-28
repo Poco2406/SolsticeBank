@@ -1,53 +1,83 @@
-.accueil {
-  display: flex;
-  flex-direction: column;
-  min-height: 100svh;
+.titre-accueil {
+  text-align: center;
 }
 
-.entete {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background: var(--blanc);
-  border-bottom: 1px solid var(--border);
-}
-
-.logo {
-  color: var(--violet);
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.accueil-contenu {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 32px 24px;
-}
-
+/* Carte du solde : centrée, largeur limitée */
 .carte-solde {
-  padding: 24px;
-  border-radius: 12px;
-  background: var(--violet);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  padding: 36px 24px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--violet), var(--violet-fonce));
   color: var(--blanc);
+  text-align: center;
   box-shadow: var(--ombre);
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+
+  /* se soulève au survol */
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(109, 40, 217, 0.25);
+  }
 }
 
 .carte-solde-titre {
-  opacity: 0.85;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
 }
 
 .carte-solde-montant {
-  margin-top: 8px;
-  font-size: 36px;
+  font-size: 44px;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: filter 0.3s;
+
+  /* le montant se floute quand on le masque */
+  &.masque {
+    filter: blur(10px);
+    user-select: none;
+  }
 }
 
+.bouton-masquer {
+  margin-top: 8px;
+  padding: 4px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--blanc);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Boutons centrés sous la carte, même largeur que la carte */
 .actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+
+  .bouton {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 .encadre {
@@ -62,46 +92,6 @@
 
 .vide {
   color: var(--gris-texte);
-}
-
-@media (max-width: 600px) {
-  .entete,
-  .accueil-contenu {
-    padding-inline: 16px;
-  }
-
-  .actions .bouton {
-    flex: 1;
-    text-align: center;
-  }
-}
-
-/* ---------- Animations ---------- */
-
-/* Les blocs apparaissent l'un après l'autre en glissant vers le haut */
-.apparition {
-  animation: glisser-haut 0.5s ease-out both;
-}
-
-.accueil-contenu > .apparition:nth-child(2) {
-  animation-delay: 0.1s;
-}
-.accueil-contenu > .apparition:nth-child(3) {
-  animation-delay: 0.2s;
-}
-.accueil-contenu > .apparition:nth-child(4) {
-  animation-delay: 0.3s;
-}
-
-@keyframes glisser-haut {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Petite main qui salue */
@@ -126,70 +116,12 @@
   }
 }
 
-/* Carte du solde qui se soulève au survol */
-.carte-solde {
-  transition:
-    transform 0.25s,
-    box-shadow 0.25s;
-
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 24px rgba(109, 40, 217, 0.25);
+@media (max-width: 600px) {
+  .actions {
+    flex-direction: column;
   }
-}
 
-.carte-solde-haut {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.bouton-masquer {
-  padding: 4px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--blanc);
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-}
-
-/* Le montant se floute quand on le masque */
-.carte-solde-montant {
-  transition: filter 0.3s;
-  font-variant-numeric: tabular-nums;
-
-  &.masque {
-    filter: blur(10px);
-    user-select: none;
-  }
-}
-
-/* Boutons qui se soulèvent au survol et s'enfoncent au clic */
-.accueil .bouton {
-  transition:
-    background 0.2s,
-    transform 0.15s;
-
-  &:hover {
-    transform: translateY(-2px);
-  }
-  &:active {
-    transform: translateY(0) scale(0.97);
-  }
-}
-
-/* Désactive les animations si l'utilisateur l'a demandé dans son système */
-@media (prefers-reduced-motion: reduce) {
-  .accueil *,
-  .accueil *::before,
-  .accueil *::after {
-    animation: none !important;
-    transition: none !important;
+  .carte-solde-montant {
+    font-size: 36px;
   }
 }
