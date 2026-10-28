@@ -84,7 +84,9 @@ function Connexion() {
             </div>
 
             <div className="connexion-forgot">
-              <span>Mot de passe oublié ?</span>
+              <Link to="/mot-de-passe-oublie">
+                Mot de passe oublié ?
+              </Link>
             </div>
 
             <button type="submit" className="connexion-submit">
