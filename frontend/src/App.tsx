@@ -4,6 +4,7 @@ import Accueil from './Pages/Accueil'
 import Transfert from './Pages/Transfert'
 import Historique from './Pages/Historique'
 import './App.css'
+import Inscription from './Pages/Inscription'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/transfert" element={<Transfert />} />
         <Route path="/historique" element={<Historique />} />
         <Route path="*" element={<h1>Page introuvable</h1>} />
+        <Route path="/inscription" element={<Inscription />} />
       </Routes>
     </BrowserRouter>
   )
