@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 import { badRequest } from "../errors/AppError.js";
 
 // Identifiant MongoDB : un id malformé doit donner 400, pas 404.
-export function assertObjectId(id: string): void {
-    if (!mongoose.isValidObjectId(id) || !/^[a-f\d]{24}$/i.test(id)) {
+// Après l'appel, TypeScript sait que la valeur est une chaîne valide.
+export function assertObjectId(id: unknown): asserts id is string {
+    if (typeof id !== "string" || !/^[a-f\d]{24}$/i.test(id) || !mongoose.isValidObjectId(id)) {
         throw badRequest("Identifiant invalide.");
     }
 }
-
 // Email normalisé : trim + minuscules.
 export const emailSchema = z.string().trim().toLowerCase().email();
 

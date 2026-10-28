@@ -1,18 +1,32 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.1.0
+  version: 0.3.0
   description: >
-    API de la banque fictive SOLSTICE BANK. Tous les montants sont en centimes
-    (12345 = 123,45 €). Démonstration, argent fictif.
+    API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
+    Tous les montants sont des entiers en centimes (12345 = 123,45 €).
+    Démonstration, argent fictif.
+
+    Format d'erreur commun : {"error":{"code":"...","message":"..."}}.
+    Par défaut, toute route exige un JWT (Authorization: Bearer <token>) ;
+    les routes publiques déclarent « security: [] ».
 servers:
   - url: http://localhost:3000
+
 tags:
   - name: Santé
   - name: Authentification
+  - name: Vérification email
+  - name: Mot de passe
+  - name: Profil
+  - name: Annuaire
+
+security:
+  - bearerAuth: []
   - name: Transactions
 
 paths:
+  # ---------------------------------------------------------------- Santé
   /api/health:
     get:
       tags: [Santé]
@@ -29,16 +43,43 @@ paths:
                 properties:
                   status: { type: string, enum: [ok] }
 
+  # ---------------------------------------------------------------- Authentification
   /api/auth/register:
     post:
       tags: [Authentification]
       summary: Créer un compte
+      description: >
+        Contrat du livret : email + mot de passe suffisent.
+        Le bloc « profile » est facultatif ; s'il est fourni, il doit être complet.
+        La majorité et l'unicité du pseudo sont vérifiées avant toute création.
+        Le compte est créé au statut « pending ».
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/Credentials" }
+            schema: { $ref: "#/components/schemas/RegisterInput" }
+            examples:
+              minimal:
+                summary: Inscription minimale (contrat du livret)
+                value: { email: alice@example.test, password: MotDePasse123! }
+              complete:
+                summary: Inscription complète en une requête
+                value:
+                  email: alice.martin@example.test
+                  password: MotDePasse123!
+                  profile:
+                    firstName: Alice
+                    lastName: Martin
+                    username: alice.m
+                    gender: female
+                    birthDate: "1998-04-12"
+                    phone: "+33612345678"
+                    address:
+                      street: 1 rue de la Paix
+                      postalCode: "75002"
+                      city: Paris
+                      country: France
       responses:
         "201":
           description: Compte créé, JWT renvoyé
@@ -47,16 +88,29 @@ paths:
               schema: { $ref: "#/components/schemas/AuthResponse" }
         "400": { $ref: "#/components/responses/InvalidInput" }
         "409":
-          description: Email déjà utilisé
+          description: Email ou pseudo déjà utilisé
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
-              example:
-                error:
-                  {
-                    code: EMAIL_ALREADY_USED,
-                    message: Cet email est déjà utilisé.,
-                  }
+              examples:
+                email:
+                  value:
+                    {
+                      error:
+                        {
+                          code: EMAIL_ALREADY_USED,
+                          message: Cet email est déjà utilisé.,
+                        },
+                    }
+                username:
+                  value:
+                    {
+                      error:
+                        {
+                          code: CONFLICT,
+                          message: Ce pseudo est déjà utilisé.,
+                        },
+                    }
 
   /api/auth/login:
     post:
@@ -188,6 +242,226 @@ paths:
         "404":
           description: Transaction introuvable
 
+  # ---------------------------------------------------------------- Vérification email
+  /api/auth/verification/request:
+    post:
+      tags: [Vérification email]
+      summary: Demander (ou renvoyer) le lien de vérification
+      description: >
+        Invalide les anciens liens, puis génère un jeton à usage unique valable 30 minutes,
+        stocké haché. En mode MAIL_TRANSPORT=console, le lien s'affiche uniquement dans le
+        terminal du serveur ; il n'est jamais renvoyé dans la réponse.
+        Limité à 5 demandes par 15 minutes.
+      responses:
+        "200":
+          description: Email envoyé, ou adresse déjà vérifiée
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+              examples:
+                sent:
+                  value: { message: Email de vérification envoyé. }
+                alreadyVerified:
+                  value: { message: Adresse email déjà vérifiée. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/auth/verification/confirm:
+    post:
+      tags: [Vérification email]
+      summary: Confirmer l'email avec le jeton reçu
+      description: >
+        Renseigne emailVerifiedAt. Si le profil est déjà complet, le compte passe
+        automatiquement au statut « active ».
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TokenInput" }
+      responses:
+        "200":
+          description: Email vérifié
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+              example: { message: Adresse email vérifiée avec succès. }
+        "400":
+          description: Jeton invalide, expiré ou déjà utilisé
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                {
+                  error:
+                    {
+                      code: INVALID_INPUT,
+                      message: "Lien invalide, expiré ou déjà utilisé.",
+                    },
+                }
+
+  # ---------------------------------------------------------------- Mot de passe
+  /api/auth/password/forgot:
+    post:
+      tags: [Mot de passe]
+      summary: Demander un lien de réinitialisation
+      description: >
+        Réponse identique que l'email existe ou non, pour ne pas révéler les comptes.
+        Invalide les anciens liens ; le nouveau est valable 30 minutes.
+        Limité à 5 demandes par 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailInput" }
+      responses:
+        "200":
+          description: Réponse neutre
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+              example:
+                {
+                  message: "Si ce compte existe, un lien de réinitialisation sera envoyé.",
+                }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/auth/password/reset:
+    post:
+      tags: [Mot de passe]
+      summary: Remplacer le mot de passe avec le jeton reçu
+      description: >
+        Consomme le jeton et incrémente tokenVersion : tous les JWT existants deviennent invalides.
+        Limité à 10 essais par 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResetPasswordInput" }
+      responses:
+        "200":
+          description: Mot de passe modifié
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+              example: { message: Mot de passe réinitialisé avec succès. }
+        "400":
+          description: Jeton invalide, expiré, déjà utilisé, ou mot de passe invalide
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                {
+                  error:
+                    {
+                      code: INVALID_INPUT,
+                      message: "Lien invalide, expiré ou déjà utilisé.",
+                    },
+                }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  # ---------------------------------------------------------------- Profil
+  /api/me:
+    get:
+      tags: [Profil]
+      summary: Profil de l'utilisateur connecté
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Profil]
+      summary: Modifier son profil
+      description: >
+        Modification partielle, au moins un champ. Email, mot de passe et statut sont refusés ici.
+        La date de naissance ne peut plus changer une fois renseignée et doit correspondre à une
+        personne majeure (calcul à la date de Paris). Si le profil devient complet et que l'email
+        est vérifié, le compte passe au statut « active ».
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfilePatch" }
+      responses:
+        "200":
+          description: Profil modifié
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Pseudo déjà utilisé
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example:
+                {
+                  error:
+                    { code: CONFLICT, message: Ce pseudo est déjà utilisé. },
+                }
+
+  # ---------------------------------------------------------------- Annuaire
+  /api/users:
+    get:
+      tags: [Annuaire]
+      summary: Lister les utilisateurs actifs (sauf soi-même)
+      description: >
+        Renvoie uniquement les données publiques (id, prénom, nom, pseudo) des comptes actifs,
+        triés par nom. La recherche est facultative : le front peut charger la liste et filtrer lui-même.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Chaque mot doit correspondre au prénom, au nom ou au pseudo (insensible à la casse).
+          schema: { type: string, minLength: 2, maxLength: 60 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+      responses:
+        "200":
+          description: Résultats paginés
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicUserList" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/users/{id}:
+    get:
+      tags: [Annuaire]
+      summary: Fiche publique d'un utilisateur actif
+      description: >
+        404 si l'utilisateur n'existe pas, n'est pas actif, ou s'il s'agit de l'utilisateur connecté.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200":
+          description: Données publiques uniquement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicUser" }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- À compléter par Jonathan
+  # /api/transactions, /api/transactions/{id}  (carnet, contrat BudgetFlow du livret)
+  # /api/account, /api/account/deposits, /api/account/withdrawals
+  # /api/transfers, /api/movements, /api/movements/{id}
+
 components:
   securitySchemes:
     bearerAuth:
@@ -196,6 +470,7 @@ components:
       bearerFormat: JWT
 
   schemas:
+    # ---------- Erreurs et messages
     Error:
       type: object
       required: [error]
@@ -207,25 +482,43 @@ components:
             code:
               type: string
               enum:
-                [
-                  INVALID_INPUT,
-                  UNAUTHORIZED,
-                  FORBIDDEN,
-                  NOT_FOUND,
-                  CONFLICT,
-                  EMAIL_ALREADY_USED,
-                  INSUFFICIENT_FUNDS,
-                  INTERNAL_ERROR,
-                ]
+                - INVALID_INPUT
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - NOT_FOUND
+                - CONFLICT
+                - EMAIL_ALREADY_USED
+                - INSUFFICIENT_FUNDS
+                - TOO_MANY_REQUESTS
+                - INTERNAL_ERROR
             message: { type: string }
 
+    Message:
+      type: object
+      properties:
+        message: { type: string, example: Demande prise en compte. }
+
+    # ---------- Authentification
     Credentials:
       type: object
       additionalProperties: false
       required: [email, password]
       properties:
         email: { type: string, format: email, example: alice@example.test }
+        password:
+          type: string
+          minLength: 8
+          description: 8 caractères minimum, 72 octets maximum (limite bcrypt).
+          example: MotDePasse123!
+
+    RegisterInput:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: alice@example.test }
         password: { type: string, minLength: 8, example: MotDePasse123! }
+        profile: { $ref: "#/components/schemas/ProfileInput" }
 
     AuthResponse:
       type: object
@@ -239,6 +532,132 @@ components:
             email: { type: string, example: alice@example.test }
         token: { type: string, description: JWT signé }
 
+    EmailInput:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email: { type: string, format: email, example: alice@example.test }
+
+    TokenInput:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          {
+            type: string,
+            pattern: "^[a-f0-9]{64}$",
+            description: Jeton reçu dans le lien (64 caractères hexadécimaux),
+          }
+
+    ResetPasswordInput:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          {
+            type: string,
+            pattern: "^[a-f0-9]{64}$",
+            description: Jeton reçu dans le lien (64 caractères hexadécimaux),
+          }
+        password:
+          type: string
+          minLength: 8
+          description: 8 caractères minimum, 72 octets maximum (limite bcrypt).
+          example: NouveauMotDePasse123!
+
+    # ---------- Profil
+    Address:
+      type: object
+      additionalProperties: false
+      required: [street, postalCode, city, country]
+      properties:
+        street: { type: string, maxLength: 120, example: 1 rue de la Paix }
+        complement:
+          { type: string, maxLength: 120, nullable: true, example: Bât. B }
+        postalCode:
+          { type: string, minLength: 2, maxLength: 12, example: "75002" }
+        city: { type: string, maxLength: 80, example: Paris }
+        country: { type: string, minLength: 2, maxLength: 80, example: France }
+
+    ProfileFields:
+      type: object
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 60, example: Alice }
+        lastName: { type: string, minLength: 1, maxLength: 60, example: Martin }
+        username:
+          type: string
+          pattern: "^[a-zA-Z0-9._-]{3,30}$"
+          description: Pseudo unique, insensible à la casse.
+          example: alice.m
+        gender: { type: string, enum: [female, male, other, unspecified] }
+        birthDate:
+          type: string
+          format: date
+          description: Date civile YYYY-MM-DD ; personne majeure ; non modifiable une fois renseignée.
+          example: "1998-04-12"
+        phone:
+          type: string
+          pattern: "^\\+[1-9]\\d{6,14}$"
+          description: Format international.
+          example: "+33612345678"
+        address: { $ref: "#/components/schemas/Address" }
+
+    ProfileInput:
+      description: Profil complet, utilisé à l'inscription.
+      allOf:
+        - $ref: "#/components/schemas/ProfileFields"
+        - type: object
+          required:
+            [firstName, lastName, username, gender, birthDate, phone, address]
+
+    ProfilePatch:
+      description: Modification partielle, au moins un champ.
+      allOf:
+        - $ref: "#/components/schemas/ProfileFields"
+        - type: object
+          minProperties: 1
+
+    Profile:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        firstName: { type: string, nullable: true }
+        lastName: { type: string, nullable: true }
+        username: { type: string, nullable: true }
+        gender: { type: string, enum: [female, male, other, unspecified] }
+        birthDate: { type: string, nullable: true }
+        address:
+          nullable: true
+          allOf: [{ $ref: "#/components/schemas/Address" }]
+        phone: { type: string, nullable: true }
+        status: { type: string, enum: [pending, active, closed] }
+        emailVerified: { type: boolean }
+        profileComplete: { type: boolean }
+
+    # ---------- Annuaire
+    PublicUser:
+      type: object
+      required: [id, firstName, lastName, username]
+      properties:
+        id: { type: string, example: 507f1f77bcf86cd799439011 }
+        firstName: { type: string, example: Alice }
+        lastName: { type: string, example: Martin }
+        username: { type: string, example: alice.m }
+
+    PublicUserList:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PublicUser" }
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 100 }
+        total: { type: integer, example: 3 }
     TransactionInput:
       type: object
       additionalProperties: false
@@ -311,31 +730,57 @@ components:
 
   responses:
     InvalidInput:
-      description: Corps, champ ou identifiant invalide
+      description: Corps, champ, paramètre ou identifiant invalide
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
           example:
-            error:
-              {
-                code: INVALID_INPUT,
-                message: "password : 8 caractères minimum",
-              }
+            {
+              error:
+                {
+                  code: INVALID_INPUT,
+                  message: "password : 8 caractères minimum",
+                },
+            }
     Unauthorized:
       description: JWT absent, invalide ou expiré, ou identifiants incorrects
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
           example:
-            error: { code: UNAUTHORIZED, message: Authentification requise. }
+            {
+              error: { code: UNAUTHORIZED, message: Authentification requise. },
+            }
+    Forbidden:
+      description: Compte bancaire non activé
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            {
+              error:
+                {
+                  code: FORBIDDEN,
+                  message: Votre compte bancaire n'est pas encore activé.,
+                },
+            }
     NotFound:
       description: Ressource absente ou appartenant à un autre utilisateur
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
           example:
-            error: { code: NOT_FOUND, message: Ressource introuvable. }
-
-# Par défaut, toute route exige un JWT. Les routes publiques mettent « security: [] ».
-security:
-  - bearerAuth: []
+            { error: { code: NOT_FOUND, message: Ressource introuvable. } }
+    TooManyRequests:
+      description: Trop de demandes sur une courte période
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            {
+              error:
+                {
+                  code: TOO_MANY_REQUESTS,
+                  message: Trop de demandes. Réessayez dans quelques minutes.,
+                },
+            }

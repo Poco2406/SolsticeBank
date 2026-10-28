@@ -3,6 +3,8 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { User } from "../models/User.js";
 import { AppError, badRequest, unauthorized } from "../errors/AppError.js";
+import { assertAdultBirthDate } from "./profile.service.js";
+import { FullProfile } from "../validation/profile.js";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -24,14 +26,20 @@ function toAuthResponse(user: { _id: unknown; email: string; tokenVersion: numbe
     return { user: { id, email: user.email }, token: signToken(id, user.tokenVersion) };
 }
 
-export async function register(email: string, password: string) {
+export async function register(email: string, password: string, profile?: FullProfile) {
     assertBcryptLength(password);
+    if (profile) assertAdultBirthDate(profile.birthDate); // refus AVANT toute création
+
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     try {
-        const user = await User.create({ email, passwordHash });
+        const user = await User.create({ email, passwordHash, ...profile });
         return toAuthResponse(user);
     } catch (err: unknown) {
-        if ((err as { code?: number }).code === 11000) {
+        const e = err as { code?: number; keyPattern?: Record<string, unknown> };
+        if (e.code === 11000 && e.keyPattern?.username) {
+            throw new AppError(409, "CONFLICT", "Ce pseudo est déjà utilisé.");
+        }
+        if (e.code === 11000) {
             throw new AppError(409, "EMAIL_ALREADY_USED", "Cet email est déjà utilisé.");
         }
         throw err;
