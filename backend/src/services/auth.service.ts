@@ -5,6 +5,7 @@ import { User } from "../models/User.js";
 import { AppError, badRequest, unauthorized } from "../errors/AppError.js";
 import { assertAdultBirthDate } from "./profile.service.js";
 import { FullProfile } from "../validation/profile.js";
+import { createAccountForUser } from "./account.service.js";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -28,22 +29,37 @@ function toAuthResponse(user: { _id: unknown; email: string; tokenVersion: numbe
 
 export async function register(email: string, password: string, profile?: FullProfile) {
     assertBcryptLength(password);
-    if (profile) assertAdultBirthDate(profile.birthDate); // refus AVANT toute création
+
+    if (profile) assertAdultBirthDate(profile.birthDate);
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+    let user;
+
     try {
-        const user = await User.create({ email, passwordHash, ...profile });
-        return toAuthResponse(user);
+        user = await User.create({ email, passwordHash, ...profile });
     } catch (err: unknown) {
-        const e = err as { code?: number; keyPattern?: Record<string, unknown> };
+        const e = err as {
+            code?: number;
+            keyPattern?: Record<string, unknown>;
+        };
+
         if (e.code === 11000 && e.keyPattern?.username) {
             throw new AppError(409, "CONFLICT", "Ce pseudo est déjà utilisé.");
         }
+
         if (e.code === 11000) {
             throw new AppError(409, "EMAIL_ALREADY_USED", "Cet email est déjà utilisé.");
         }
+
         throw err;
     }
+
+    // Créer le compte bancaire associé à l'utilisateur.
+    await createAccountForUser(String(user._id));
+
+    return toAuthResponse(user);
+
 }
 
 export async function login(email: string, password: string) {

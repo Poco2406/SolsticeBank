@@ -4,6 +4,7 @@ import { env } from "./config/env.js";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { transactionRouter } from "./routes/transaction.routes.js";
+import { accountRouter } from "./routes/account.routes.js";
 import { docsRouter } from "./docs/swagger.js";
 import { usersRouter } from "./routes/users.routes.js";
 import { meRouter } from "./routes/me.routes.js";
@@ -19,11 +20,10 @@ export function createApp() {
     res.status(200).json({ status: "ok" });
   });
 
-
-
   app.use("/api/users", usersRouter);
   app.use("/api/me", meRouter);
   app.use("/api/auth", authRouter);
+  app.use("/api/account", accountRouter);
   app.use("/api/transactions", transactionRouter);
   app.use("/api/docs", docsRouter);
 
