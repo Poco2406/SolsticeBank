@@ -1,0 +1,52 @@
+### Tests manuels (extension VS Code « REST Client »)
+# Renseigner @token avec le token renvoyé par /login (compte au profil complet).
+@baseUrl = http://localhost:3000/api
+@token = COLLER_LE_JWT_ICI
+@movementId = COLLER_UN_ID_DE_MOUVEMENT_ICI
+
+### Connexion
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{"email":"alice@example.test","password":"MotDePasse123!"}
+
+### ---------------------------------------------------------------- Historique
+
+### Liste (défaut : page 1, 20 par page) -> 200 {items, page, limit, total}
+GET {{baseUrl}}/movements
+Authorization: Bearer {{token}}
+
+### Filtres cumulés -> 200
+GET {{baseUrl}}/movements?type=deposit&from=2026-10-01&to=2026-10-31&minAmountCents=100&maxAmountCents=100000&page=1&limit=10
+Authorization: Bearer {{token}}
+
+### Date impossible -> 400
+GET {{baseUrl}}/movements?from=2026-02-30
+Authorization: Bearer {{token}}
+
+### from après to -> 400
+GET {{baseUrl}}/movements?from=2026-10-31&to=2026-10-01
+Authorization: Bearer {{token}}
+
+### limit au-delà de 100 -> 400
+GET {{baseUrl}}/movements?limit=500
+Authorization: Bearer {{token}}
+
+### Paramètre inconnu -> 400
+GET {{baseUrl}}/movements?ownerId=507f1f77bcf86cd799439011
+Authorization: Bearer {{token}}
+
+### Sans JWT -> 401
+GET {{baseUrl}}/movements
+
+### Détail -> 200 (404 avec le JWT d'un autre utilisateur)
+GET {{baseUrl}}/movements/{{movementId}}
+Authorization: Bearer {{token}}
+
+### Id malformé -> 400
+GET {{baseUrl}}/movements/abc
+Authorization: Bearer {{token}}
+
+### Id valide absent -> 404
+GET {{baseUrl}}/movements/507f1f77bcf86cd799439011
+Authorization: Bearer {{token}}
