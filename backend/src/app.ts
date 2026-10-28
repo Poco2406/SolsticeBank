@@ -3,6 +3,7 @@ import cors from "cors";
 import { env } from "./config/env.js";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { transactionRouter } from "./routes/transaction.routes.js";
 import { docsRouter } from "./docs/swagger.js";
 
 export function createApp() {
@@ -16,10 +17,10 @@ export function createApp() {
     res.status(200).json({ status: "ok" });
   });
 
-
-
   app.use("/api/auth", authRouter);
+  app.use("/api/transactions", transactionRouter);
   app.use("/api/docs", docsRouter);
+
   app.use(notFoundHandler);
   app.use(errorHandler);
 
