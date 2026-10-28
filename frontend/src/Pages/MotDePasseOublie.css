@@ -1,0 +1,207 @@
+
+.oubli-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F8F7FC;
+  color: #1F2937;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.oubli-page * {
+  box-sizing: border-box;
+}
+
+.oubli-container {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
+/* Logo */
+
+.oubli-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oubli-logo-image {
+  width: 230px;
+  height: 110px;
+  object-fit: contain;
+}
+
+.oubli-slogan {
+  color: #6B7280;
+  font-size: 13px;
+  margin: 0 0 32px;
+}
+
+/* Carte principale */
+
+.oubli-card {
+  background: #FFFFFF;
+  border: 1px solid #EDE9FE;
+  border-radius: 18px;
+  padding: 36px 32px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(31, 41, 55, 0.04);
+}
+
+.oubli-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #EDE9FE;
+  font-size: 25px;
+}
+
+.oubli-card h1 {
+  font-size: 25px;
+  color: #1F2937;
+  margin: 0 0 12px;
+}
+
+.oubli-description {
+  color: #6B7280;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+/* Formulaire */
+
+.oubli-field {
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.oubli-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 9px;
+}
+
+.oubli-field input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 9px;
+  background: #F8F7FC;
+  color: #1F2937;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.oubli-field input:focus {
+  border-color: #6D28D9;
+  box-shadow: 0 0 0 3px #EDE9FE;
+}
+
+/* Boutons */
+
+.oubli-submit {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 9px;
+  background: #6D28D9;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.oubli-submit:hover {
+  background: #5B21B6;
+}
+
+.oubli-retour {
+  display: inline-block;
+  margin-top: 26px;
+  color: #6D28D9;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.oubli-retour:hover {
+  text-decoration: underline;
+}
+
+/* Confirmation simulée */
+
+.oubli-confirmation {
+  padding: 18px;
+  background: #EDE9FE;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.oubli-confirmation h2 {
+  margin: 0 0 10px;
+  color: #1F2937;
+  font-size: 18px;
+}
+
+.oubli-confirmation p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1F2937;
+}
+
+.oubli-reessayer {
+  margin-top: 12px;
+  padding: 10px 18px;
+  background: #FFFFFF;
+  border: 1px solid #6D28D9;
+  border-radius: 8px;
+  color: #6D28D9;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Pied de page */
+
+.oubli-footer {
+  margin-top: 32px;
+  color: #9CA3AF;
+  font-size: 12px;
+}
+
+/* Accessibilité */
+
+.oubli-submit:focus-visible,
+.oubli-reessayer:focus-visible,
+.oubli-retour:focus-visible {
+  outline: 3px solid #C4B5FD;
+  outline-offset: 3px;
+}
+
+/* Responsive */
+
+@media (max-width: 480px) {
+  .oubli-card {
+    padding: 28px 20px;
+  }
+
+  .oubli-logo-image {
+    width: 200px;
+  }
+
+  .oubli-field input {
+    font-size: 16px;
+  }
+}
