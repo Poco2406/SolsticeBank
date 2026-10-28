@@ -40,6 +40,8 @@ export function assertAdultBirthDate(birthDate: string): void {
 
 // ---------- Profil ----------
 
+// Un profil complet est requis pour utiliser les fonctions bancaires
+// (cas d'un compte créé avec l'inscription minimale du livret).
 export function isProfileComplete(u: UserDocument): boolean {
     return Boolean(
         u.firstName &&
@@ -80,33 +82,21 @@ export function toProfile(u: UserDocument) {
     };
 }
 
-// ---------- Activation ----------
-
-// À appeler après la complétion du profil ET après la vérification de l'email.
-// Sans effet si l'utilisateur n'est pas prêt ou déjà activé.
-export async function tryActivate(u: UserDocument): Promise<void> {
-    if (u.status !== "pending" || !u.emailVerifiedAt || !isProfileComplete(u)) return;
-
-    u.status = "active";
-    await u.save();
-    // TODO quand Jonathan aura mergé : await createAccountForUser(String(u._id));
-}
-
 // ---------- Routes /api/me ----------
 
-async function findActiveOrPendingUser(userId: string): Promise<UserDocument> {
+async function findOpenUser(userId: string): Promise<UserDocument> {
     const user = await User.findById(userId);
     if (!user || user.status === "closed") throw unauthorized();
     return user;
 }
 
 export async function getMe(userId: string) {
-    const user = await findActiveOrPendingUser(userId);
+    const user = await findOpenUser(userId);
     return toProfile(user);
 }
 
 export async function updateMe(userId: string, data: Partial<FullProfile>) {
-    const user = await findActiveOrPendingUser(userId);
+    const user = await findOpenUser(userId);
 
     if (data.birthDate !== undefined) {
         if (user.birthDate && user.birthDate !== data.birthDate) {
@@ -126,6 +116,5 @@ export async function updateMe(userId: string, data: Partial<FullProfile>) {
         throw err;
     }
 
-    await tryActivate(user);
     return toProfile(user);
 }

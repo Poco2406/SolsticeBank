@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.3.0
+  version: 0.4.0
   description: >
     API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
     Tous les montants sont des entiers en centimes (12345 = 123,45 €).
@@ -23,7 +23,6 @@ tags:
 
 security:
   - bearerAuth: []
-  - name: Transactions
 
 paths:
   # ---------------------------------------------------------------- Santé
@@ -52,7 +51,9 @@ paths:
         Contrat du livret : email + mot de passe suffisent.
         Le bloc « profile » est facultatif ; s'il est fourni, il doit être complet.
         La majorité et l'unicité du pseudo sont vérifiées avant toute création.
-        Le compte est créé au statut « pending ».
+        Le compte est actif immédiatement, sans vérification d'email.
+        Un compte créé sans profil doit compléter son profil (PATCH /api/me)
+        avant d'accéder aux fonctions bancaires (403 sinon).
       security: []
       requestBody:
         required: true
@@ -130,117 +131,6 @@ paths:
               schema: { $ref: "#/components/schemas/AuthResponse" }
         "400": { $ref: "#/components/responses/InvalidInput" }
         "401": { $ref: "#/components/responses/Unauthorized" }
-  /api/transactions:
-    get:
-      tags: [Transactions]
-      summary: Récupérer les transactions de l'utilisateur
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Liste des transactions
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Transaction"
-        "401":
-          description: Non authentifié
-
-    post:
-      tags: [Transactions]
-      summary: Créer une transaction
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TransactionInput"
-      responses:
-        "201":
-          description: Transaction créée
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Transaction"
-        "400":
-          description: Données invalides
-        "401":
-          description: Non authentifié
-
-  /api/transactions/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: "^[0-9a-fA-F]{24}$"
-
-    get:
-      tags: [Transactions]
-      summary: Récupérer une transaction par son ID
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Transaction trouvée
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Transaction"
-        "400":
-          description: Identifiant invalide
-        "401":
-          description: Non authentifié
-        "404":
-          description: Transaction introuvable
-
-    patch:
-      tags: [Transactions]
-      summary: Modifier une transaction
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TransactionUpdate"
-      responses:
-        "200":
-          description: Transaction modifiée
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Transaction"
-        "400":
-          description: Données ou identifiant invalides
-        "401":
-          description: Non authentifié
-        "404":
-          description: Transaction introuvable
-
-    delete:
-      tags: [Transactions]
-      summary: Supprimer une transaction
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: Transaction supprimée
-        "400":
-          description: Identifiant invalide
-        "401":
-          description: Non authentifié
-        "404":
-          description: Transaction introuvable
 
   # ---------------------------------------------------------------- Vérification email
   /api/auth/verification/request:
@@ -271,8 +161,8 @@ paths:
       tags: [Vérification email]
       summary: Confirmer l'email avec le jeton reçu
       description: >
-        Renseigne emailVerifiedAt. Si le profil est déjà complet, le compte passe
-        automatiquement au statut « active ».
+        Renseigne emailVerifiedAt. La vérification est facultative :
+        elle ne conditionne aucun accès.
       security: []
       requestBody:
         required: true
@@ -381,8 +271,7 @@ paths:
       description: >
         Modification partielle, au moins un champ. Email, mot de passe et statut sont refusés ici.
         La date de naissance ne peut plus changer une fois renseignée et doit correspondre à une
-        personne majeure (calcul à la date de Paris). Si le profil devient complet et que l'email
-        est vérifié, le compte passe au statut « active ».
+        personne majeure (calcul à la date de Paris).
       requestBody:
         required: true
         content:
@@ -411,10 +300,10 @@ paths:
   /api/users:
     get:
       tags: [Annuaire]
-      summary: Lister les utilisateurs actifs (sauf soi-même)
+      summary: Lister les utilisateurs (sauf soi-même)
       description: >
-        Renvoie uniquement les données publiques (id, prénom, nom, pseudo) des comptes actifs,
-        triés par nom. La recherche est facultative : le front peut charger la liste et filtrer lui-même.
+        Renvoie uniquement les données publiques (id, prénom, nom, pseudo) des comptes actifs
+        dont le profil est renseigné, triés par nom. La recherche est facultative : le front peut charger la liste et filtrer lui-même.
       parameters:
         - name: search
           in: query
@@ -439,9 +328,10 @@ paths:
   /api/users/{id}:
     get:
       tags: [Annuaire]
-      summary: Fiche publique d'un utilisateur actif
+      summary: Fiche publique d'un utilisateur
       description: >
-        404 si l'utilisateur n'existe pas, n'est pas actif, ou s'il s'agit de l'utilisateur connecté.
+        404 si l'utilisateur n'existe pas, est fermé, n'a pas de profil, ou s'il s'agit de
+        l'utilisateur connecté.
       parameters:
         - name: id
           in: path
@@ -634,7 +524,7 @@ components:
           nullable: true
           allOf: [{ $ref: "#/components/schemas/Address" }]
         phone: { type: string, nullable: true }
-        status: { type: string, enum: [pending, active, closed] }
+        status: { type: string, enum: [active, closed] }
         emailVerified: { type: boolean }
         profileComplete: { type: boolean }
 
@@ -658,75 +548,6 @@ components:
         page: { type: integer, example: 1 }
         limit: { type: integer, example: 100 }
         total: { type: integer, example: 3 }
-    TransactionInput:
-      type: object
-      additionalProperties: false
-      required: [label, amount, type, date]
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 120
-          example: Courses
-        amount:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-          description: Montant en centimes
-          example: 2500
-        type:
-          type: string
-          enum: [income, expense]
-          example: expense
-        date:
-          type: string
-          format: date
-          example: "2026-10-27"
-
-    TransactionUpdate:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        label:
-          type: string
-          minLength: 1
-          maxLength: 120
-        amount:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        type:
-          type: string
-          enum: [income, expense]
-        date:
-          type: string
-          format: date
-
-    Transaction:
-      type: object
-      required: [id, ownerId, label, amount, type, date]
-      properties:
-        id:
-          type: string
-          example: "671f5a2b8c9d123456789abc"
-        ownerId:
-          type: string
-          example: "671f5a2b8c9d123456789def"
-        label:
-          type: string
-          example: Courses
-        amount:
-          type: integer
-          description: Montant en centimes
-          example: 2500
-        type:
-          type: string
-          enum: [income, expense]
-        date:
-          type: string
-          format: date
-          example: "2026-10-27"
 
   responses:
     InvalidInput:
@@ -752,7 +573,7 @@ components:
               error: { code: UNAUTHORIZED, message: Authentification requise. },
             }
     Forbidden:
-      description: Compte bancaire non activé
+      description: Profil incomplet, fonctions bancaires indisponibles
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -761,7 +582,7 @@ components:
               error:
                 {
                   code: FORBIDDEN,
-                  message: Votre compte bancaire n'est pas encore activé.,
+                  message: Complétez votre profil pour accéder aux fonctions bancaires.,
                 },
             }
     NotFound:
