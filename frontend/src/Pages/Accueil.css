@@ -1,0 +1,127 @@
+.titre-accueil {
+  text-align: center;
+}
+
+/* Carte du solde : centrée, largeur limitée */
+.carte-solde {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  padding: 36px 24px 28px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--violet), var(--violet-fonce));
+  color: var(--blanc);
+  text-align: center;
+  box-shadow: var(--ombre);
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+
+  /* se soulève au survol */
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(109, 40, 217, 0.25);
+  }
+}
+
+.carte-solde-titre {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.carte-solde-montant {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: filter 0.3s;
+
+  /* le montant se floute quand on le masque */
+  &.masque {
+    filter: blur(10px);
+    user-select: none;
+  }
+}
+
+.bouton-masquer {
+  margin-top: 8px;
+  padding: 4px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--blanc);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Boutons centrés sous la carte, même largeur que la carte */
+.actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+
+  .bouton {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.encadre {
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--lavande);
+
+  h2 {
+    margin-bottom: 12px;
+  }
+}
+
+.vide {
+  color: var(--gris-texte);
+}
+
+/* Petite main qui salue */
+.salut {
+  display: inline-block;
+  transform-origin: 70% 70%;
+  animation: saluer 1.2s ease-in-out 0.6s 2;
+}
+
+@keyframes saluer {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(18deg);
+  }
+  40%,
+  80% {
+    transform: rotate(-10deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .actions {
+    flex-direction: column;
+  }
+
+  .carte-solde-montant {
+    font-size: 36px;
+  }
+}

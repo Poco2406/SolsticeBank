@@ -1,0 +1,266 @@
+.transfert-titre {
+  text-align: center;
+
+  p {
+    margin-top: 8px;
+    color: var(--gris-texte);
+  }
+}
+
+/* Carte blanche centrée, même largeur que la carte du solde */
+.carte-transfert {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  padding: 32px 24px;
+  border-radius: 20px;
+  background: var(--blanc);
+  box-shadow: var(--ombre);
+}
+
+/* ---------- Champs du formulaire ---------- */
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  span {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  em {
+    color: var(--gris-texte);
+    font-style: normal;
+    font-weight: 400;
+  }
+
+  input {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--blanc-casse);
+    color: var(--gris-fonce);
+    font-size: 16px;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s,
+      background 0.2s;
+
+    /* contour violet quand le champ est sélectionné */
+    &:focus {
+      outline: none;
+      border-color: var(--violet);
+      background: var(--blanc);
+      box-shadow: 0 0 0 4px var(--lavande);
+    }
+  }
+}
+
+.compteur-caracteres {
+  align-self: flex-end;
+  color: var(--gris-texte);
+  font-size: 12px;
+}
+
+/* Montant en grand au centre, comme sur la carte du solde */
+.champ-montant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--lavande);
+
+  > span {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--violet);
+  }
+}
+
+.champ-montant-saisie {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  font-size: 40px;
+  font-weight: 700;
+
+  input {
+    width: 6ch;
+    border: none;
+    background: transparent;
+    color: var(--gris-fonce);
+    font: inherit;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    &::placeholder {
+      color: var(--border);
+    }
+  }
+}
+
+.carte-transfert > .bouton {
+  width: 100%;
+  text-align: center;
+}
+
+/* ---------- Récapitulatif ---------- */
+
+.recap-titre {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gris-texte);
+}
+
+.recap-montant {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--violet);
+  font-variant-numeric: tabular-nums;
+}
+
+.recap {
+  margin: 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--lavande);
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+  }
+
+  div + div {
+    border-top: 1px solid var(--border);
+  }
+
+  dt {
+    color: var(--gris-texte);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 500;
+    text-align: right;
+    word-break: break-word;
+  }
+}
+
+.actions-transfert {
+  display: flex;
+  gap: 12px;
+
+  .bouton {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.avertissement {
+  color: var(--gris-texte);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ---------- Succès ---------- */
+
+.succes {
+  align-items: center;
+  text-align: center;
+
+  p {
+    color: var(--gris-texte);
+  }
+
+  .actions-transfert {
+    width: 100%;
+  }
+}
+
+/* Coche qui se dessine */
+.coche {
+  width: 72px;
+  height: 72px;
+
+  circle {
+    fill: var(--lavande);
+    stroke: var(--violet);
+    stroke-width: 2;
+    stroke-dasharray: 151;
+    stroke-dashoffset: 151;
+    animation: dessiner 0.6s ease-out 0.2s forwards;
+  }
+
+  path {
+    fill: none;
+    stroke: var(--violet);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 40;
+    stroke-dashoffset: 40;
+    animation: dessiner 0.4s ease-out 0.7s forwards;
+  }
+}
+
+@keyframes dessiner {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Sans animation, la coche s'affiche directement */
+@media (prefers-reduced-motion: reduce) {
+  .coche circle,
+  .coche path {
+    stroke-dashoffset: 0;
+  }
+}
+
+.lien-retour {
+  align-self: center;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 600px) {
+  .actions-transfert {
+    flex-direction: column-reverse;
+  }
+
+  .recap-montant {
+    font-size: 36px;
+  }
+}
