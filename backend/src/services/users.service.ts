@@ -11,6 +11,9 @@ type PublicUserRow = {
 
 const PUBLIC_FIELDS = { firstName: 1, lastName: 1, username: 1 } as const;
 
+// Visible dans l'annuaire : compte ouvert et profil renseigné (pseudo présent).
+const VISIBLE = { status: "active" as const, username: { $type: "string" as const } };
+
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function toPublicUser(u: PublicUserRow) {
@@ -22,7 +25,7 @@ function toPublicUser(u: PublicUserRow) {
     };
 }
 
-// Liste des utilisateurs actifs, sauf l'utilisateur connecté. Recherche facultative.
+// Liste des utilisateurs visibles, sauf l'utilisateur connecté. Recherche facultative.
 export async function listDirectory(
     currentUserId: string,
     page: number,
@@ -31,7 +34,7 @@ export async function listDirectory(
 ) {
     const terms = search ? search.trim().split(/\s+/).map(escapeRegex) : [];
     const filter = {
-        status: "active" as const,
+        ...VISIBLE,
         _id: { $ne: new Types.ObjectId(currentUserId) },
         ...(terms.length > 0 && {
             $and: terms.map((term) => {
@@ -53,13 +56,12 @@ export async function listDirectory(
     return { items: docs.map(toPublicUser), page, limit, total };
 }
 
-// Fiche publique d'un utilisateur actif (destinataire d'un virement).
+// Fiche publique d'un utilisateur visible (destinataire d'un virement).
 export async function getPublicUser(currentUserId: string, targetId: string) {
     if (targetId === currentUserId) {
         throw notFound("Utilisateur introuvable."); // on ne se choisit pas soi-même
     }
-    const user = await User.findOne({ _id: targetId, status: "active" }, PUBLIC_FIELDS)
-        .lean<PublicUserRow | null>();
+    const user = await User.findOne({ _id: targetId, ...VISIBLE }, PUBLIC_FIELDS).lean<PublicUserRow | null>();
     if (!user) throw notFound("Utilisateur introuvable.");
     return toPublicUser(user);
 }

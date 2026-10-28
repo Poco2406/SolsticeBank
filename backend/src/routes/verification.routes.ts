@@ -9,7 +9,6 @@ import { User } from "../models/User.js";
 import { AuthToken } from "../models/AuthToken.js";
 import { createAuthToken } from "../services/authTokenService.js";
 import { sendEmail } from "../services/emailService.js";
-import { tryActivate } from "../services/profile.service.js";
 import { badRequest, unauthorized } from "../errors/AppError.js";
 import { env } from "../config/env.js";
 
@@ -72,7 +71,7 @@ verificationRouter.post("/request", requestLimiter, requireAuth, async (req, res
 });
 
 // POST /api/auth/verification/confirm
-// Consommer le jeton, marquer l'email comme vérifié, puis activer le compte si possible.
+// Consommer le jeton et marquer l'email comme vérifié (facultatif : ne conditionne aucun accès).
 verificationRouter.post("/confirm", async (req, res) => {
   const parsed = confirmSchema.safeParse(req.body);
 
@@ -122,11 +121,6 @@ verificationRouter.post("/confirm", async (req, res) => {
   if (!verifiedUserId) {
     throw badRequest("Lien invalide, expiré ou déjà utilisé.");
   }
-
-  // Hors transaction : l'activation (et bientôt la création du compte bancaire)
-  // ne doit pas être rejouée si MongoDB relance la transaction.
-  const user = await User.findById(verifiedUserId);
-  if (user) await tryActivate(user);
 
   res.status(200).json({ message: "Adresse email vérifiée avec succès." });
 });
