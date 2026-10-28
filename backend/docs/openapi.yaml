@@ -468,12 +468,122 @@ paths:
         "404":
           description: Aucun compte bancaire trouvé
 
+  /api/account/deposits:
+    post:
+      tags: [Compte bancaire]
+      summary: Déposer de l'argent sur son compte
+      description: >
+        Crédite le compte de l'utilisateur connecté. Aucun plafond métier n'est
+        appliqué ; le montant et le solde résultant doivent rester des entiers
+        sûrs JavaScript. La clé d'idempotence permet de rejouer une requête
+        sans effectuer un second dépôt.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountOperationInput"
+            example:
+              amountCents: 5000
+      responses:
+        "201":
+          description: Dépôt effectué ou résultat précédent rejoué
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOperationResult"
+        "400":
+          $ref: "#/components/responses/InvalidInput"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/OperationConflict"
+        "500":
+          description: Erreur interne
+
+  /api/account/withdrawals:
+    post:
+      tags: [Compte bancaire]
+      summary: Retirer de l'argent de son compte
+      description: >
+        Débite le compte uniquement si le solde est suffisant.
+        Une même clé d'idempotence avec un contenu différent provoque un conflit.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountOperationInput"
+            example:
+              amountCents: 2500
+      responses:
+        "201":
+          description: Retrait effectué ou résultat précédent rejoué
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountOperationResult"
+        "400":
+          $ref: "#/components/responses/InvalidInput"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/OperationConflict"
+        "500":
+          description: Erreur interne
+
+  /api/account/movements:
+    get:
+      tags: [Compte bancaire]
+      summary: Consulter l'historique des mouvements de son compte
+      description: >
+        Renvoie les mouvements appartenant à l'utilisateur connecté,
+        du plus récent au plus ancien, limités aux 100 derniers.
+      responses:
+        "200":
+          description: Historique des mouvements
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [movements, count]
+                properties:
+                  movements:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Movement"
+                  count:
+                    type: integer
+                    minimum: 0
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >
+        Clé unique pour identifier une opération. La même clé avec le même
+        contenu rejoue le résultat précédent ; avec un contenu différent,
+        elle provoque une erreur 409.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      example: deposit-2026-001
 
   schemas:
     # ---------- Erreurs et messages
@@ -497,12 +607,15 @@ components:
                 - INSUFFICIENT_FUNDS
                 - TOO_MANY_REQUESTS
                 - INTERNAL_ERROR
-            message: { type: string }
+            message:
+              type: string
 
     Message:
       type: object
       properties:
-        message: { type: string, example: Demande prise en compte. }
+        message:
+          type: string
+          example: Demande prise en compte.
 
     # ---------- Authentification
     Credentials:
@@ -719,6 +832,83 @@ components:
               type: string
               format: date-time
 
+    # ---------- Opérations bancaires et mouvements
+    AccountOperationInput:
+      type: object
+      additionalProperties: false
+      required: [amountCents]
+      properties:
+        amountCents:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+          description: Montant positif en centimes, représentable comme entier sûr JavaScript.
+          example: 5000
+
+    Operation:
+      type: object
+      properties:
+        _id:
+          type: string
+        actorId:
+          type: string
+        accountId:
+          type: string
+        type:
+          type: string
+          enum: [deposit, withdrawal]
+        amountCents:
+          type: integer
+          minimum: 1
+        idempotencyKey:
+          type: string
+        requestFingerprint:
+          type: string
+        balanceAfterCents:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+
+    Movement:
+      type: object
+      properties:
+        _id:
+          type: string
+        ownerId:
+          type: string
+        accountId:
+          type: string
+        operationId:
+          type: string
+        type:
+          type: string
+          enum: [deposit, withdrawal]
+        amountCents:
+          type: integer
+          minimum: 1
+        balanceAfterCents:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+
+    AccountOperationResult:
+      type: object
+      required: [operation, movement, balanceCents]
+      properties:
+        operation:
+          $ref: "#/components/schemas/Operation"
+        movement:
+          $ref: "#/components/schemas/Movement"
+        balanceCents:
+          type: integer
+          minimum: 0
+          description: Solde du compte après l'opération, en centimes.
+
+
     # ---------- Compte bancaire
     Account:
       type: object
@@ -748,6 +938,30 @@ components:
           format: date-time
 
   responses:
+
+    OperationConflict:
+      description: >
+        Solde insuffisant pour le retrait, dépassement de la borne
+        d'entier sûr pour le solde, ou clé d'idempotence déjà utilisée
+        avec un contenu différent.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            insufficientFunds:
+              summary: Solde insuffisant
+              value:
+                error:
+                  code: INSUFFICIENT_FUNDS
+                  message: Solde insuffisant.
+            idempotencyConflict:
+              summary: Clé réutilisée avec un contenu différent
+              value:
+                error:
+                  code: CONFLICT
+                  message: Cette clé d'idempotence a déjà été utilisée avec un contenu différent.
+
     InvalidInput:
       description: Corps, champ, paramètre ou identifiant invalide
       content:
