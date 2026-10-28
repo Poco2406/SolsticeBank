@@ -8,6 +8,7 @@ import { accountRouter } from "./routes/account.routes.js";
 import { docsRouter } from "./docs/swagger.js";
 import { usersRouter } from "./routes/users.routes.js";
 import { meRouter } from "./routes/me.routes.js";
+import { transferRouter } from "./routes/transfer.routes.js";
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/account", accountRouter);
   app.use("/api/transactions", transactionRouter);
+  app.use("/api/transfers", transferRouter);
   app.use("/api/docs", docsRouter);
 
   app.use(notFoundHandler);
