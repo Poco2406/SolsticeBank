@@ -20,6 +20,8 @@ tags:
   - name: Mot de passe
   - name: Profil
   - name: Annuaire
+  - name: Transactions
+  - name: Compte bancaire
 
 security:
   - bearerAuth: []
@@ -347,10 +349,124 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ---------------------------------------------------------------- À compléter par Jonathan
-  # /api/transactions, /api/transactions/{id}  (carnet, contrat BudgetFlow du livret)
-  # /api/account, /api/account/deposits, /api/account/withdrawals
-  # /api/transfers, /api/movements, /api/movements/{id}
+ # ---------------------------------------------------------------- Transactions
+  /api/transactions:
+    get:
+      tags: [Transactions]
+      summary: Récupérer toutes les transactions de l'utilisateur connecté
+      responses:
+        "200":
+          description: Liste des transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Transactions]
+      summary: Créer une transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Transaction créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          $ref: "#/components/responses/InvalidInput"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/transactions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+
+    get:
+      tags: [Transactions]
+      summary: Récupérer une transaction par son ID
+      responses:
+        "200":
+          description: Transaction récupérée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [Transactions]
+      summary: Modifier une transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionPatch"
+      responses:
+        "200":
+          description: Transaction modifiée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          $ref: "#/components/responses/InvalidInput"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Transactions]
+      summary: Supprimer une transaction
+      responses:
+        "204":
+          description: Transaction supprimée
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ---------------------------------------------------------------- Compte bancaire
+  /api/account:
+    get:
+      tags: [Compte bancaire]
+      summary: Récupérer le compte bancaire de l'utilisateur connecté
+      responses:
+        "200":
+          description: Compte bancaire récupéré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account:
+                    $ref: "#/components/schemas/Account"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Aucun compte bancaire trouvé
 
 components:
   securitySchemes:
@@ -548,6 +664,88 @@ components:
         page: { type: integer, example: 1 }
         limit: { type: integer, example: 100 }
         total: { type: integer, example: 3 }
+      # ---------- Transactions
+    TransactionInput:
+      type: object
+      additionalProperties: false
+      required: [label, amount, type, date]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amount:
+          type: integer
+          minimum: 1
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+
+    TransactionPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amount:
+          type: integer
+          minimum: 1
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+
+    Transaction:
+      allOf:
+        - $ref: "#/components/schemas/TransactionInput"
+        - type: object
+          properties:
+            _id:
+              type: string
+            userId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    # ---------- Compte bancaire
+    Account:
+      type: object
+      properties:
+        _id:
+          type: string
+        ownerId:
+          type: string
+        iban:
+          type: string
+          example: FR7630006000011234567890189
+        currency:
+          type: string
+          enum: [EUR]
+        balanceCents:
+          type: integer
+          minimum: 0
+          example: 50000
+        status:
+          type: string
+          enum: [active, closed]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
   responses:
     InvalidInput:
