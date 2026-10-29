@@ -21,6 +21,7 @@ if (!Number.isInteger(port) || port <= 0) {
 
 export const env = {
     port,
+    isProduction: process.env.NODE_ENV === 'production',
     frontendUrl: required('FRONTEND_URL'),
     mongodbUri: required('MONGODB_URI'),
     mongodbTestUri: required('MONGODB_TEST_URI'),
@@ -33,6 +34,7 @@ export const env = {
             port: Number(required('SMTP_PORT')),
             user: required('SMTP_USER'),
             pass: required('SMTP_PASS'),
+            from: required('SMTP_FROM'),
         }
         : null,
 } as const;

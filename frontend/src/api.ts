@@ -191,11 +191,13 @@ export type Compte = {
   status: 'active' | 'closed'
 }
 
+// Dépôt/retrait : operationId renseigné ; virement : transferId renseigné
 export type Mouvement = {
   id: string
   accountId: string
-  operationId: string
-  type: 'deposit' | 'withdrawal'
+  operationId: string | null
+  transferId: string | null
+  type: 'deposit' | 'withdrawal' | 'transfer_debit' | 'transfer_credit'
   amountCents: number
   balanceAfterCents: number
   createdAt: string // date ISO
@@ -274,6 +276,55 @@ export const listerMouvements = (filtres: FiltresMouvements = {}) =>
   api<ListePaginee<Mouvement>>(`/movements${chaineRequete(filtres)}`)
 
 export const lireMouvement = (id: string) => api<Mouvement>(`/movements/${id}`)
+
+// ---------- Opérations d'argent ----------
+// `cle` (Idempotency-Key) : générer avec crypto.randomUUID() et la réutiliser
+// telle quelle si l'on renvoie la même demande après une erreur réseau.
+
+export type ResultatOperation = {
+  operation: {
+    id: string
+    accountId: string
+    type: 'deposit' | 'withdrawal'
+    amountCents: number
+    balanceAfterCents: number
+    createdAt: string
+  }
+  movement: Mouvement
+  balanceCents: number // solde après l'opération
+}
+
+export type ResultatVirement = {
+  transfer: {
+    id: string
+    senderAccountId: string
+    recipientId: string
+    amountCents: number
+    createdAt: string
+  }
+  replayed: boolean // true : demande déjà traitée, aucun nouveau débit
+}
+
+export const deposer = (amountCents: number, cle: string) =>
+  api<ResultatOperation>('/account/deposits', {
+    method: 'POST',
+    body: { amountCents },
+    headers: { 'Idempotency-Key': cle },
+  })
+
+export const retirer = (amountCents: number, cle: string) =>
+  api<ResultatOperation>('/account/withdrawals', {
+    method: 'POST',
+    body: { amountCents },
+    headers: { 'Idempotency-Key': cle },
+  })
+
+export const virer = (recipientIban: string, amountCents: number, cle: string) =>
+  api<ResultatVirement>('/transfers', {
+    method: 'POST',
+    body: { recipientIban, amountCents },
+    headers: { 'Idempotency-Key': cle },
+  })
 
 // ---------- Carnet budgétaire (CRUD du livret, sans effet sur le solde) ----------
 

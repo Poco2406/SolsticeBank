@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { User } from "../models/User.js";
@@ -37,7 +38,12 @@ export async function register(email: string, password: string, profile?: FullPr
     let user;
 
     try {
-        user = await User.create({ email, passwordHash, ...profile });
+        // Utilisateur et compte bancaire créés ensemble, ou pas du tout.
+        user = await mongoose.connection.transaction(async (session) => {
+            const [created] = await User.create([{ email, passwordHash, ...profile }], { session });
+            await createAccountForUser(String(created._id), session);
+            return created;
+        });
     } catch (err: unknown) {
         const e = err as {
             code?: number;
@@ -54,9 +60,6 @@ export async function register(email: string, password: string, profile?: FullPr
 
         throw err;
     }
-
-    // Créer le compte bancaire associé à l'utilisateur.
-    await createAccountForUser(String(user._id));
 
     return toAuthResponse(user);
 

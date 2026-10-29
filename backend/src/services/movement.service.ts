@@ -2,12 +2,15 @@ import { Types } from "mongoose";
 import { Movement } from "../models/Movement.js";
 import { notFound } from "../errors/AppError.js";
 
-type MovementType = "deposit" | "withdrawal";
+export const MOVEMENT_TYPES = ["deposit", "withdrawal", "transfer_debit", "transfer_credit"] as const;
+type MovementType = (typeof MOVEMENT_TYPES)[number];
 
+// Un mouvement vient soit d'une opération (dépôt/retrait), soit d'un virement.
 type MovementRow = {
     _id: Types.ObjectId;
     accountId: Types.ObjectId;
-    operationId: Types.ObjectId;
+    operationId?: Types.ObjectId | null;
+    transferId?: Types.ObjectId | null;
     type: MovementType;
     amountCents: number;
     balanceAfterCents: number;
@@ -26,12 +29,13 @@ export type MovementFilters = {
 const TIME_ZONE = "Europe/Paris";
 
 // Format public d'un mouvement : id au lieu de _id, sans ownerId ni __v.
-// Aussi utilisé par les réponses des dépôts et retraits (operation.service).
+// Aussi utilisé par les réponses des dépôts et retraits (account.routes).
 export function toMovementResponse(m: MovementRow) {
     return {
         id: String(m._id),
         accountId: String(m.accountId),
-        operationId: String(m.operationId),
+        operationId: m.operationId ? String(m.operationId) : null,
+        transferId: m.transferId ? String(m.transferId) : null,
         type: m.type,
         amountCents: m.amountCents,
         balanceAfterCents: m.balanceAfterCents,
@@ -94,13 +98,4 @@ export async function getMovement(ownerId: string, id: string) {
     const movement = await Movement.findOne({ _id: id, ownerId }).lean<MovementRow | null>();
     if (!movement) throw notFound("Mouvement introuvable.");
     return toMovementResponse(movement);
-}
-
-// À supprimer avec la route GET /api/account/movements (remplacée par GET /api/movements).
-export async function getByOwnerId(ownerId: string) {
-    return Movement.find({ ownerId })
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .lean()
-        .exec();
 }

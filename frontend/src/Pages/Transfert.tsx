@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import Entete from '../components/Entete'
 import Modale from '../components/Modale'
+import { ApiError, virer } from '../api'
 import './Transfert.css'
 
 type Etape = 'saisie' | 'termine'
@@ -57,13 +58,6 @@ function Transfert() {
 
     setErreur('')
 
-    const token = sessionStorage.getItem('solsticeToken')
-
-    if (!token) {
-      setErreur('Vous devez être connecté pour effectuer un virement.')
-      return
-    }
-
     const montantEuros = Number(montant)
     const montantExact = montantEuros * 100
     const amountCents = Math.round(montantExact)
@@ -93,38 +87,23 @@ function Transfert() {
     cleVirement.current = key
 
     try {
-      const response = await fetch(
-        'http://localhost:3000/api/transfers',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'Idempotency-Key': key,
-          },
-          body: JSON.stringify({
-            recipientIban,
-            amountCents,
-          }),
-        },
-      )
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setErreur(data.error?.message ?? 'Le virement a été refusé.')
-        return
-      }
+      // Jeton, proxy et format d'erreur gérés par api.ts (401 → retour à la connexion)
+      await virer(recipientIban, amountCents, key)
 
       // Afficher la réussite uniquement après confirmation de l'API.
       setModaleOuverte(false)
       setEtape('termine')
       cleVirement.current = null
-    } catch {
-      // Ne pas changer la clé : le serveur peut avoir reçu le virement.
-      setErreur(
-        'Impossible de confirmer le résultat. Réessayez avec la même demande.',
-      )
+    } catch (err) {
+      if (err instanceof ApiError) {
+        // Refus explicite du serveur (solde insuffisant, IBAN inconnu…)
+        setErreur(err.message)
+      } else {
+        // Ne pas changer la clé : le serveur peut avoir reçu le virement.
+        setErreur(
+          'Impossible de confirmer le résultat. Réessayez avec la même demande.',
+        )
+      }
     } finally {
       envoiVerrouille.current = false
       setEnvoiEnCours(false)

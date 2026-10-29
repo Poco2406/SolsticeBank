@@ -5,7 +5,7 @@ import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireBankingActive } from "../middlewares/requireBankingActive.js";
 import { requireIdempotencyKey } from "../middlewares/requireIdempotencyKey.js";
 import { validateBody } from "../middlewares/validate.js";
-import { executeTransfer } from "../services/transfer.service.js";
+import { executeTransfer, toTransferResponse } from "../services/transfer.service.js";
 
 export const transferRouter = Router();
 
@@ -35,7 +35,7 @@ transferRouter.post(
     );
 
     res.status(result.replayed ? 200 : 201).json({
-      transfer: result.transfer,
+      transfer: toTransferResponse(result.transfer),
       replayed: result.replayed,
     });
   },

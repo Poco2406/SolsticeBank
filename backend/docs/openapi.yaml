@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.5.0
+  version: 0.6.0
   description: >
     API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
     Tous les montants sont des entiers en centimes (12345 = 123,45 €).
@@ -411,6 +411,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transaction"
+        "400":
+          $ref: "#/components/responses/InvalidInput"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -445,6 +447,8 @@ paths:
       responses:
         "204":
           description: Transaction supprimée
+        "400":
+          $ref: "#/components/responses/InvalidInput"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -468,7 +472,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
-          description: Aucun compte bancaire trouvé
+          $ref: "#/components/responses/NotFound"
 
   /api/account/deposits:
     post:
@@ -478,7 +482,7 @@ paths:
         Crédite le compte de l'utilisateur connecté. Aucun plafond métier n'est
         appliqué ; le montant et le solde résultant doivent rester des entiers
         sûrs JavaScript. La clé d'idempotence permet de rejouer une requête
-        sans effectuer un second dépôt.
+        sans effectuer un second dépôt. Profil incomplet : 403.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -500,6 +504,10 @@ paths:
           $ref: "#/components/responses/InvalidInput"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/OperationConflict"
         "500":
@@ -510,8 +518,9 @@ paths:
       tags: [Compte bancaire]
       summary: Retirer de l'argent de son compte
       description: >
-        Débite le compte uniquement si le solde est suffisant.
+        Débite le compte uniquement si le solde est suffisant (sinon 409 INSUFFICIENT_FUNDS).
         Une même clé d'idempotence avec un contenu différent provoque un conflit.
+        Profil incomplet : 403.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -533,36 +542,14 @@ paths:
           $ref: "#/components/responses/InvalidInput"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/OperationConflict"
         "500":
           description: Erreur interne
-
-  /api/account/movements:
-    get:
-      tags: [Compte bancaire]
-      summary: Consulter l'historique des mouvements de son compte
-      description: >
-        Renvoie les mouvements appartenant à l'utilisateur connecté,
-        du plus récent au plus ancien, limités aux 100 derniers.
-      responses:
-        "200":
-          description: Historique des mouvements
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [movements, count]
-                properties:
-                  movements:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Movement"
-                  count:
-                    type: integer
-                    minimum: 0
-        "401":
-          $ref: "#/components/responses/Unauthorized"
 
   # ---------------------------------------------------------------- Historique
   /api/movements:
@@ -577,7 +564,7 @@ paths:
       parameters:
         - name: type
           in: query
-          schema: { type: string, enum: [deposit, withdrawal] }
+          schema: { type: string, enum: [deposit, withdrawal, transfer_debit, transfer_credit] }
         - name: from
           in: query
           description: Premier jour inclus (YYYY-MM-DD), antérieur ou égal à to.
@@ -665,8 +652,14 @@ paths:
       responses:
         "201":
           description: Virement effectué
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransferResult" }
         "200":
-          description: Virement déjà effectué (idempotence)
+          description: Virement déjà effectué (idempotence), même reçu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransferResult" }
         "400":
           $ref: "#/components/responses/InvalidInput"
         "401":
@@ -939,17 +932,13 @@ components:
       allOf:
         - $ref: "#/components/schemas/TransactionInput"
         - type: object
+          required: [id, ownerId]
           properties:
-            _id:
+            id:
               type: string
-            userId:
+              example: 507f1f77bcf86cd799439012
+            ownerId:
               type: string
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
 
     # ---------- Opérations bancaires et mouvements
     AccountOperationInput:
@@ -966,10 +955,9 @@ components:
 
     Operation:
       type: object
+      required: [id, accountId, type, amountCents, balanceAfterCents, createdAt]
       properties:
-        _id:
-          type: string
-        actorId:
+        id:
           type: string
         accountId:
           type: string
@@ -979,10 +967,6 @@ components:
         amountCents:
           type: integer
           minimum: 1
-        idempotencyKey:
-          type: string
-        requestFingerprint:
-          type: string
         balanceAfterCents:
           type: integer
           minimum: 0
@@ -992,7 +976,11 @@ components:
 
     Movement:
       type: object
-      required: [id, accountId, operationId, type, amountCents, balanceAfterCents, createdAt]
+      description: >
+        Ligne de l'historique. Un dépôt ou un retrait a un operationId ;
+        un virement a un transferId (transfer_debit pour l'émetteur,
+        transfer_credit pour le destinataire). L'autre vaut null.
+      required: [id, accountId, operationId, transferId, type, amountCents, balanceAfterCents, createdAt]
       properties:
         id:
           type: string
@@ -1000,9 +988,13 @@ components:
           type: string
         operationId:
           type: string
+          nullable: true
+        transferId:
+          type: string
+          nullable: true
         type:
           type: string
-          enum: [deposit, withdrawal]
+          enum: [deposit, withdrawal, transfer_debit, transfer_credit]
         amountCents:
           type: integer
           minimum: 1
@@ -1037,12 +1029,41 @@ components:
           minimum: 0
           description: Solde du compte après l'opération, en centimes.
 
+    # ---------- Virements
+    Transfer:
+      type: object
+      required: [id, senderAccountId, recipientId, amountCents, createdAt]
+      properties:
+        id:
+          type: string
+        senderAccountId:
+          type: string
+        recipientId:
+          type: string
+          description: Identifiant de l'utilisateur destinataire.
+        amountCents:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+
+    TransferResult:
+      type: object
+      required: [transfer, replayed]
+      properties:
+        transfer:
+          $ref: "#/components/schemas/Transfer"
+        replayed:
+          type: boolean
+          description: true si la clé d'idempotence avait déjà servi (aucun nouveau débit).
 
     # ---------- Compte bancaire
     Account:
       type: object
+      required: [id, ownerId, iban, currency, balanceCents, status, createdAt, updatedAt]
       properties:
-        _id:
+        id:
           type: string
         ownerId:
           type: string

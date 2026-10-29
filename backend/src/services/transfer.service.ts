@@ -22,6 +22,24 @@ function fingerprint(data: TransferInput): string {
     .digest("hex");
 }
 
+// Réponse publique d'un virement : ni idempotencyKey, ni requestFingerprint,
+// ni identifiant du compte destinataire.
+export function toTransferResponse(transfer: {
+  _id: unknown;
+  recipientId: unknown;
+  senderAccountId: unknown;
+  amountCents: number;
+  createdAt: Date;
+}) {
+  return {
+    id: String(transfer._id),
+    senderAccountId: String(transfer.senderAccountId),
+    recipientId: String(transfer.recipientId),
+    amountCents: transfer.amountCents,
+    createdAt: transfer.createdAt,
+  };
+}
+
 // Recherche d'un virement déjà enregistré avec cette clé.
 async function getPreviousTransfer(
   senderId: string,
