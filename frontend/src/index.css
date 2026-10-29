@@ -92,6 +92,15 @@ a {
   }
 }
 
+/* Bouton rouge des actions destructrices (suppression) */
+.bouton-danger {
+  background: #b91c1c;
+
+  &:hover {
+    background: #991b1b;
+  }
+}
+
 /* ---------- Mise en page des pages après connexion ---------- */
 
 .page-app {

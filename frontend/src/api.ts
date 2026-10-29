@@ -211,7 +211,7 @@ export function decrireMouvement(m: Mouvement): { libelle: string; categorie: st
   const autre = m.counterparty
   const nom = autre
     ? [autre.firstName, autre.lastName].filter(Boolean).join(' ') || `@${autre.username}`
-    : 'un client'
+    : 'un compte supprimé' // l'autre partie a supprimé son compte
   switch (m.type) {
     case 'deposit':
       return { libelle: 'Dépôt', categorie: 'Dépôt', entree: true }
@@ -295,6 +295,13 @@ export const lireProfil = () => api<Profil>('/me')
 
 export const modifierProfil = (champs: Partial<ProfilSaisi>) =>
   api<Profil>('/me', { method: 'PATCH', body: champs })
+
+// Suppression définitive, confirmée par le mot de passe (403 s'il est faux).
+// Le jeton devient invalide : on l'efface aussitôt.
+export async function supprimerCompte(password: string) {
+  await api<void>('/me', { method: 'DELETE', body: { password } })
+  deconnecter()
+}
 
 export const listerUtilisateurs = (search?: string) =>
   api<ListePaginee<UtilisateurPublic>>(`/users${chaineRequete({ search })}`)

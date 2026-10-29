@@ -202,10 +202,3 @@
   }
 }
 
-.bouton-danger {
-  background: #b91c1c;
-
-  &:hover {
-    background: #991b1b;
-  }
-}

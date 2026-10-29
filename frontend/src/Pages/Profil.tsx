@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Entete from '../components/Entete'
+import Modale from '../components/Modale'
 import {
+  formaterMontant,
   lireCompte,
   lireProfil,
   messageErreur,
   modifierProfil,
+  supprimerCompte,
   type Genre,
   type Profil as ProfilApi,
   type ProfilSaisi,
@@ -104,7 +107,16 @@ function Profil() {
   const [profil, setProfil] = useState<ProfilApi | null>(null)
   const [form, setForm] = useState<Formulaire | null>(null)
   const [iban, setIban] = useState<string | null>(null)
+  const [solde, setSolde] = useState<number | null>(null)
   const [chargement, setChargement] = useState(true)
+  const navigate = useNavigate()
+
+  // Suppression du compte (fenêtre de confirmation)
+  const [suppressionOuverte, setSuppressionOuverte] = useState(false)
+  const [motDePasse, setMotDePasse] = useState('')
+  const [confirme, setConfirme] = useState(false)
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false)
+  const [erreurSuppression, setErreurSuppression] = useState('')
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState('')
   const [succes, setSucces] = useState('')
@@ -124,9 +136,35 @@ function Profil() {
 
     // Le compte bancaire est facultatif pour cette page
     lireCompte()
-      .then((compte) => setIban(compte.iban))
+      .then((compte) => {
+        setIban(compte.iban)
+        setSolde(compte.balanceCents)
+      })
       .catch(() => {})
   }, [])
+
+  function ouvrirSuppression() {
+    setMotDePasse('')
+    setConfirme(false)
+    setErreurSuppression('')
+    setSuppressionOuverte(true)
+  }
+
+  async function confirmerSuppression(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!motDePasse || !confirme) return
+
+    setSuppressionEnCours(true)
+    setErreurSuppression('')
+    try {
+      await supprimerCompte(motDePasse)
+      navigate('/', { replace: true })
+    } catch (err) {
+      // ex. « Mot de passe incorrect. »
+      setErreurSuppression(messageErreur(err))
+      setSuppressionEnCours(false)
+    }
+  }
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target
@@ -412,10 +450,86 @@ function Profil() {
           </section>
         )}
 
+        {profil && (
+          <section className="profil-danger apparition" aria-labelledby="titre-suppression">
+            <h2 id="titre-suppression">Supprimer mon compte</h2>
+            <p>
+              Votre compte et votre compte bancaire seront fermés définitivement.
+              Cette action est irréversible.
+            </p>
+            <button type="button" className="bouton bouton-danger" onClick={ouvrirSuppression}>
+              Supprimer mon compte
+            </button>
+          </section>
+        )}
+
         <Link to="/accueil" className="lien-retour apparition">
           ← Retour à l'accueil
         </Link>
       </main>
+
+      <Modale
+        ouverte={suppressionOuverte}
+        onFermer={() => !suppressionEnCours && setSuppressionOuverte(false)}
+        titre="Supprimer définitivement votre compte ?"
+      >
+        <form className="suppression" onSubmit={confirmerSuppression} noValidate>
+          <ul>
+            <li>Vous ne pourrez plus vous connecter.</li>
+            <li>Vous disparaîtrez de l'annuaire et ne pourrez plus recevoir de virement.</li>
+            <li>Votre carnet budgétaire sera effacé.</li>
+            {solde !== null && solde > 0 && (
+              <li>
+                <strong>Votre solde de {formaterMontant(solde)} sera perdu.</strong> Pensez à
+                le virer avant.
+              </li>
+            )}
+          </ul>
+
+          <label className="suppression-champ">
+            <span>Mot de passe actuel</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={motDePasse}
+              onChange={(e) => {
+                setMotDePasse(e.target.value)
+                setErreurSuppression('')
+              }}
+              required
+            />
+          </label>
+
+          <label className="suppression-case">
+            <input type="checkbox" checked={confirme} onChange={(e) => setConfirme(e.target.checked)} />
+            Je comprends que cette action est irréversible.
+          </label>
+
+          {erreurSuppression && (
+            <p className="suppression-erreur" role="alert">
+              {erreurSuppression}
+            </p>
+          )}
+
+          <div className="suppression-actions">
+            <button
+              type="button"
+              className="bouton bouton-secondaire"
+              onClick={() => setSuppressionOuverte(false)}
+              disabled={suppressionEnCours}
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="bouton bouton-danger"
+              disabled={!motDePasse || !confirme || suppressionEnCours}
+            >
+              {suppressionEnCours ? 'Suppression…' : 'Supprimer mon compte'}
+            </button>
+          </div>
+        </form>
+      </Modale>
     </div>
   )
 }
