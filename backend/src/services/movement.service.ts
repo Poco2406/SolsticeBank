@@ -68,7 +68,8 @@ async function withCounterparties(movements: MovementRow[]) {
 
     const userIds = [...new Set(otherPartyOf.values())];
     const users = userIds.length
-        ? await User.find({ _id: { $in: userIds } }, { firstName: 1, lastName: 1, username: 1 })
+        // Compte supprimé (closed) : pas de correspondant, le front affiche « un compte supprimé »
+        ? await User.find({ _id: { $in: userIds }, status: "active" }, { firstName: 1, lastName: 1, username: 1 })
             .lean<{ _id: Types.ObjectId; firstName?: string | null; lastName?: string | null; username?: string | null }[]>()
         : [];
     const byId = new Map<string, Counterparty>(

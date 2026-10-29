@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.8.0
+  version: 0.9.0
   description: >
     API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
     Tous les montants sont des entiers en centimes (12345 = 123,45 €).
@@ -299,6 +299,36 @@ paths:
                   error:
                     { code: CONFLICT, message: Ce pseudo est déjà utilisé. },
                 }
+    delete:
+      tags: [Profil]
+      summary: Supprimer définitivement son compte
+      description: >
+        Confirmé par le mot de passe actuel. En une seule transaction : compte
+        utilisateur fermé (statut closed, coordonnées effacées, email libéré),
+        toutes les sessions invalidées, retrait de l'annuaire, compte bancaire
+        clôturé (le solde abandonné reste tracé), carnet budgétaire supprimé.
+        Les mouvements et virements sont conservés : l'autre partie d'un
+        virement voit ensuite counterparty à null.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [password]
+              properties:
+                password: { type: string, minLength: 1, example: MotDePasse123! }
+      responses:
+        "204": { description: Compte supprimé, aucun corps }
+        "400": { $ref: "#/components/responses/InvalidInput" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Mot de passe incorrect (la session reste ouverte)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { error: { code: FORBIDDEN, message: Mot de passe incorrect. } }
 
   # ---------------------------------------------------------------- Annuaire
   /api/users:

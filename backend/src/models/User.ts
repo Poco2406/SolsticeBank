@@ -31,6 +31,7 @@ const userSchema = new Schema(
         status: { type: String, enum: ["active", "closed"], default: "active" },
         emailVerifiedAt: { type: Date, default: null },
         tokenVersion: { type: Number, default: 0 },
+        closedAt: { type: Date, default: null }, // date de suppression du compte (DELETE /api/me)
     },
     { timestamps: true },
 );
