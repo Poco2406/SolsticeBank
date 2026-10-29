@@ -1,0 +1,66 @@
+/* Même largeur que la carte d'inscription, dans la mise en page des pages connectées */
+.profil {
+  width: 100%;
+  max-width: 808px;
+  margin-inline: auto;
+}
+
+.profil-titre {
+  text-align: center;
+
+  p {
+    margin-top: 8px;
+    color: var(--gris-texte);
+  }
+}
+
+.profil-message {
+  color: var(--gris-texte);
+  text-align: center;
+}
+
+/* Bandeau en tête de carte pour un compte sans profil */
+.profil-incomplet {
+  margin-bottom: 28px;
+  padding: 14px;
+  border-radius: 9px;
+  background: var(--lavande);
+  color: var(--violet-fonce);
+  font-size: 14px;
+}
+
+/* Champs en lecture seule : grisés, sans contour violet au focus */
+.profil .inscription-field input[readonly] {
+  background: var(--blanc);
+  color: var(--gris-texte);
+  cursor: default;
+
+  &:focus {
+    border-color: #e5e7eb;
+    box-shadow: none;
+  }
+}
+
+.profil-actions {
+  display: flex;
+  gap: 12px;
+
+  > * {
+    flex: 1;
+  }
+
+  .bouton {
+    height: 50px;
+    padding-block: 0;
+  }
+
+  button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column-reverse;
+  }
+}

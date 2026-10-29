@@ -24,9 +24,40 @@
   object-fit: contain;
 }
 
+.entete-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lien-profil {
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+
+  /* page en cours */
+  &.active {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+
 @media (max-width: 600px) {
   .entete {
     padding-inline: 16px;
+  }
+
+  .entete-actions {
+    gap: 10px;
+  }
+
+  .entete-actions .bouton {
+    padding: 8px 12px;
+    font-size: 14px;
   }
 
   .logo-image {
