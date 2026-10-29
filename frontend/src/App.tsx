@@ -8,6 +8,7 @@ import Inscription from './Pages/Inscription'
 import MotDePasseOublie from './Pages/MotDePasseOublie'
 import Profil from './Pages/Profil'
 import Carnet from './Pages/Carnet'
+import NouveauMotDePasse from './Pages/NouveauMotDePasse'
 
 function App() {
   return (
@@ -22,6 +23,8 @@ function App() {
         <Route path="*" element={<h1>Page introuvable</h1>} />
         <Route path="/inscription" element={<Inscription />} />
         <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+        {/* Lien envoyé par email (password.routes.ts) */}
+        <Route path="/reset-password" element={<NouveauMotDePasse />} />
       </Routes>
     </BrowserRouter>
   )
