@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.6.0
+  version: 0.7.0
   description: >
     API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
     Tous les montants sont des entiers en centimes (12345 = 123,45 €).
@@ -629,6 +629,10 @@ paths:
         Le débit, le crédit, les deux mouvements et le reçu
         sont enregistrés dans une transaction MongoDB atomique.
         La clé d'idempotence évite les doubles virements.
+
+        Destinataire : exactement l'un des deux champs. recipientId est l'id d'un
+        utilisateur de l'annuaire (GET /api/users) ; s'il n'y est pas visible : 404.
+        recipientIban sert pour un destinataire dont on connaît l'IBAN.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -638,11 +642,16 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [recipientIban, amountCents]
+              required: [amountCents]
               properties:
+                recipientId:
+                  type: string
+                  pattern: "^[a-fA-F0-9]{24}$"
+                  description: Id d'un utilisateur de l'annuaire (exclusif avec recipientIban).
                 recipientIban:
                   type: string
                   pattern: "^FR[0-9]{25}$"
+                  description: IBAN du destinataire (exclusif avec recipientId).
                   example: FR7630006000011234567890189
                 amountCents:
                   type: integer
@@ -666,6 +675,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           description: Solde insuffisant, compte inactif ou conflit d'idempotence
           content:

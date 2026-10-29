@@ -6,9 +6,12 @@ import { User } from "../models/User.js";
 import { Transfer } from "../models/Transfer.js";
 import { Movement } from "../models/Movement.js";
 import { AppError } from "../errors/AppError.js";
+import { assertObjectId } from "../validation/common.js";
 
+// Destinataire désigné par son IBAN, ou par son id choisi dans l'annuaire (exactement l'un des deux).
 type TransferInput = {
-  recipientIban: string;
+  recipientIban?: string;
+  recipientId?: string;
   amountCents: number;
 };
 
@@ -72,7 +75,8 @@ export async function executeTransfer(
   data: TransferInput,
   idempotencyKey: string,
 ) {
-  const recipientIban = data.recipientIban.trim().toUpperCase();
+  const recipientIban = data.recipientIban?.trim().toUpperCase();
+  const recipientId = data.recipientId;
   const amountCents = data.amountCents;
 
   // 1. Validation du montant et du destinataire.
@@ -84,7 +88,15 @@ export async function executeTransfer(
     );
   }
 
-  if (!/^FR\d{25}$/.test(recipientIban)) {
+  if ((recipientIban === undefined) === (recipientId === undefined)) {
+    throw new AppError(
+      400,
+      "INVALID_INPUT",
+      "Indiquez soit recipientId, soit recipientIban.",
+    );
+  }
+
+  if (recipientIban !== undefined && !/^FR\d{25}$/.test(recipientIban)) {
     throw new AppError(
       400,
       "INVALID_INPUT",
@@ -92,10 +104,15 @@ export async function executeTransfer(
     );
   }
 
-  const requestFingerprint = fingerprint({
-    recipientIban,
-    amountCents,
-  });
+  if (recipientId !== undefined) {
+    assertObjectId(recipientId);
+  }
+
+  const requestFingerprint = fingerprint(
+    recipientId !== undefined
+      ? { recipientId, amountCents }
+      : { recipientIban, amountCents },
+  );
 
   // 2. Réutilisation d'un résultat déjà enregistré.
   const previous = await getPreviousTransfer(
@@ -135,10 +152,25 @@ export async function executeTransfer(
         }
 
         // 5. Rechercher le compte destinataire actif.
-        const recipient = await Account.findOne({
-          iban: recipientIban,
-          status: "active",
-        }).session(session);
+        if (recipientId !== undefined) {
+          // Destinataire choisi dans l'annuaire : mêmes règles de visibilité
+          // (compte actif et profil renseigné), sinon 404 comme GET /api/users/:id.
+          const visible = await User.exists({
+            _id: recipientId,
+            status: "active",
+            username: { $type: "string" },
+          }).session(session);
+
+          if (!visible) {
+            throw new AppError(404, "NOT_FOUND", "Destinataire introuvable.");
+          }
+        }
+
+        const recipient = await Account.findOne(
+          recipientId !== undefined
+            ? { ownerId: recipientId, status: "active" }
+            : { iban: recipientIban, status: "active" },
+        ).session(session);
 
         if (!recipient) {
           throw conflict("Compte destinataire inactif ou introuvable.");

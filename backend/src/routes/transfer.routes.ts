@@ -9,13 +9,18 @@ import { executeTransfer, toTransferResponse } from "../services/transfer.servic
 
 export const transferRouter = Router();
 
+// Destinataire : recipientIban OU recipientId (utilisateur choisi dans l'annuaire).
 const transferSchema = z.object({
   recipientIban: z.string().trim().regex(
     /^FR\d{25}$/,
     "L'IBAN doit respecter le format français.",
-  ),
+  ).optional(),
+  recipientId: z.string().regex(/^[a-f\d]{24}$/i, "Identifiant invalide.").optional(),
   amountCents: z.number().int().positive().safe(),
-}).strict();
+}).strict().refine(
+  (body) => (body.recipientIban === undefined) !== (body.recipientId === undefined),
+  { message: "Indiquez soit recipientId, soit recipientIban.", path: ["recipientId"] },
+);
 
 // Toutes les routes de virements nécessitent une authentification
 // et un profil bancaire actif.
