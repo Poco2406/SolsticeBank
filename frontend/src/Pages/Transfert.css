@@ -264,3 +264,145 @@
     font-size: 36px;
   }
 }
+
+/* ---------- Choix du destinataire ---------- */
+
+.choix-destinataire {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+
+  legend {
+    margin-bottom: 8px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+/* Deux boutons côte à côte : client Solstice ou IBAN */
+.onglets-destinataire {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--lavande);
+
+  button {
+    padding: 10px 8px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--gris-texte);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+
+    &[aria-pressed='true'] {
+      background: var(--blanc);
+      color: var(--violet);
+      box-shadow: var(--ombre);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--violet);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.liste-beneficiaires {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gris-fonce);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--lavande);
+      outline: none;
+    }
+  }
+
+  span {
+    color: var(--gris-texte);
+    font-size: 13px;
+  }
+}
+
+.liste-beneficiaires-vide {
+  margin: 0;
+  padding: 12px;
+  color: var(--gris-texte);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Bénéficiaire retenu, avec possibilité d'en changer */
+.beneficiaire-choisi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--violet);
+  border-radius: 10px;
+  background: var(--lavande);
+
+  div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  span {
+    color: var(--gris-texte);
+    font-size: 13px;
+  }
+}
+
+.lien-changer {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--violet);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--blanc);
+    outline: none;
+  }
+}

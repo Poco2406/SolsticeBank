@@ -319,10 +319,16 @@ export const retirer = (amountCents: number, cle: string) =>
     headers: { 'Idempotency-Key': cle },
   })
 
-export const virer = (recipientIban: string, amountCents: number, cle: string) =>
+// Destinataire : un utilisateur choisi dans l'annuaire, ou un IBAN saisi.
+export type Destinataire = { id: string } | { iban: string }
+
+export const virer = (destinataire: Destinataire, amountCents: number, cle: string) =>
   api<ResultatVirement>('/transfers', {
     method: 'POST',
-    body: { recipientIban, amountCents },
+    body:
+      'id' in destinataire
+        ? { recipientId: destinataire.id, amountCents }
+        : { recipientIban: destinataire.iban, amountCents },
     headers: { 'Idempotency-Key': cle },
   })
 

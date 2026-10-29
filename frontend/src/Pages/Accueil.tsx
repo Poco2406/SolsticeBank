@@ -37,6 +37,20 @@ function Accueil() {
   const [soldeCentimes, setSoldeCentimes] = useState<number | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [soldeVisible, setSoldeVisible] = useState(true);
+  const [iban, setIban] = useState<string | null>(null);
+  const [ibanCopie, setIbanCopie] = useState(false);
+
+  // Copie l'IBAN (sans espaces) pour le transmettre à quelqu'un.
+  async function copierIban() {
+    if (!iban) return;
+    try {
+      await navigator.clipboard.writeText(iban);
+      setIbanCopie(true);
+      setTimeout(() => setIbanCopie(false), 2000);
+    } catch {
+      // presse-papiers indisponible : l'IBAN reste affiché et sélectionnable
+    }
+  }
 
   // Le compteur anime des euros : conversion depuis les centimes.
   const soldeAnime = useCompteur((soldeCentimes ?? 0) / 100);
@@ -46,9 +60,11 @@ function Accueil() {
       .then(setProfil)
       .catch((err) => setErreur(messageErreur(err)));
 
-    // Tant que la route de Jonathan n'existe pas, le solde reste « — € ».
     lireCompte()
-      .then((compte) => setSoldeCentimes(compte.balanceCents))
+      .then((compte) => {
+        setSoldeCentimes(compte.balanceCents);
+        setIban(compte.iban);
+      })
       .catch(() => {});
   }, []);
 
@@ -86,6 +102,19 @@ function Accueil() {
           >
             {soldeVisible ? "Masquer le solde" : "Afficher le solde"}
           </button>
+
+          {iban && (
+            <div className="carte-solde-iban">
+              <span>IBAN</span>
+              <code>{iban.replace(/(.{4})/g, "$1 ").trim()}</code>
+              <button type="button" onClick={copierIban}>
+                {ibanCopie ? "Copié ✓" : "Copier"}
+              </button>
+              <span className="sr-only" role="status">
+                {ibanCopie ? "IBAN copié dans le presse-papiers" : ""}
+              </span>
+            </div>
+          )}
         </section>
 
         <section className="actions apparition">

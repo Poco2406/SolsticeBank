@@ -1,13 +1,26 @@
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import Entete from '../components/Entete'
 import Modale from '../components/Modale'
-import { ApiError, virer } from '../api'
+import { ApiError, listerUtilisateurs, messageErreur, virer } from '../api'
+import type { UtilisateurPublic } from '../api'
 import './Transfert.css'
 
 type Etape = 'saisie' | 'termine'
+
+// Bénéficiaire choisi dans l'annuaire, ou IBAN saisi à la main
+type Mode = 'annuaire' | 'iban'
+
+function nomComplet(u: UtilisateurPublic) {
+  return `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()
+}
+
+// Recherche sans tenir compte des accents ni de la casse
+function normaliser(texte: string) {
+  return texte.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
 
 const MOTIF_MAX = 140
 
@@ -35,19 +48,62 @@ function Transfert() {
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
   const [erreur, setErreur] = useState('')
 
+  const [mode, setMode] = useState<Mode>('annuaire')
+  const [annuaire, setAnnuaire] = useState<UtilisateurPublic[]>([])
+  const [erreurAnnuaire, setErreurAnnuaire] = useState('')
+  const [recherche, setRecherche] = useState('')
+  const [beneficiaire, setBeneficiaire] = useState<UtilisateurPublic | null>(null)
+
   // Conserver la clé en cas de nouvelle tentative.
   const cleVirement = useRef<string | null>(null)
   const envoiVerrouille = useRef(false)
+
+  // L'annuaire (100 personnes maximum) est chargé une fois puis filtré ici.
+  useEffect(() => {
+    listerUtilisateurs()
+      .then((page) => setAnnuaire(page.items))
+      .catch((err) => setErreurAnnuaire(messageErreur(err)))
+  }, [])
+
+  const termes = normaliser(recherche.trim())
+  const resultats = termes
+    ? annuaire.filter((u) =>
+        normaliser(`${u.username ?? ''} ${nomComplet(u)}`).includes(termes),
+      )
+    : annuaire
+
+  // Libellé du destinataire pour le récapitulatif et la confirmation
+  const libelleDestinataire =
+    mode === 'annuaire'
+      ? beneficiaire
+        ? `${nomComplet(beneficiaire)} (@${beneficiaire.username})`
+        : ''
+      : formaterIban(destinataire)
 
   function reinitialiserDemande() {
     cleVirement.current = null
     setErreur('')
   }
 
+  function changerMode(nouveau: Mode) {
+    setMode(nouveau)
+    reinitialiserDemande()
+  }
+
+  function choisirBeneficiaire(u: UtilisateurPublic) {
+    setBeneficiaire(u)
+    reinitialiserDemande()
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
     if (envoiVerrouille.current) return
+
+    if (mode === 'annuaire' && !beneficiaire) {
+      setErreur('Choisissez un bénéficiaire dans la liste.')
+      return
+    }
 
     setErreur('')
     setModaleOuverte(true)
@@ -75,8 +131,13 @@ function Transfert() {
       return
     }
 
-    if (!/^FR\d{25}$/.test(recipientIban)) {
+    if (mode === 'iban' && !/^FR\d{25}$/.test(recipientIban)) {
       setErreur('Veuillez saisir un IBAN français valide.')
+      return
+    }
+
+    if (mode === 'annuaire' && !beneficiaire) {
+      setErreur('Choisissez un bénéficiaire dans la liste.')
       return
     }
 
@@ -88,7 +149,13 @@ function Transfert() {
 
     try {
       // Jeton, proxy et format d'erreur gérés par api.ts (401 → retour à la connexion)
-      await virer(recipientIban, amountCents, key)
+      await virer(
+        mode === 'annuaire' && beneficiaire
+          ? { id: beneficiaire.id }
+          : { iban: recipientIban },
+        amountCents,
+        key,
+      )
 
       // Afficher la réussite uniquement après confirmation de l'API.
       setModaleOuverte(false)
@@ -96,7 +163,7 @@ function Transfert() {
       cleVirement.current = null
     } catch (err) {
       if (err instanceof ApiError) {
-        // Refus explicite du serveur (solde insuffisant, IBAN inconnu…)
+        // Refus explicite du serveur (solde insuffisant, destinataire inconnu…)
         setErreur(err.message)
       } else {
         // Ne pas changer la clé : le serveur peut avoir reçu le virement.
@@ -112,6 +179,8 @@ function Transfert() {
 
   function nouveauTransfert() {
     setDestinataire('')
+    setBeneficiaire(null)
+    setRecherche('')
     setMontant('')
     setMotif('')
     setEtape('saisie')
@@ -154,20 +223,106 @@ function Transfert() {
               </div>
             </label>
 
-            <label className="champ">
-              <span>Destinataire (IBAN)</span>
-              <input
-                type="text"
-                placeholder="FR76 0000 0000 0000 0000 0000 000"
-                value={formaterIban(destinataire)}
-                onChange={(e) => {
-                  setDestinataire(e.target.value.replace(/\s/g, ''))
-                  reinitialiserDemande()
-                }}
-                maxLength={42}
-                required
-              />
-            </label>
+            <fieldset className="choix-destinataire">
+              <legend>Destinataire</legend>
+
+              <div className="onglets-destinataire" role="group" aria-label="Type de destinataire">
+                <button
+                  type="button"
+                  aria-pressed={mode === 'annuaire'}
+                  onClick={() => changerMode('annuaire')}
+                >
+                  Un client Solstice
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={mode === 'iban'}
+                  onClick={() => changerMode('iban')}
+                >
+                  Par IBAN
+                </button>
+              </div>
+
+              {mode === 'annuaire' && (
+                beneficiaire ? (
+                  <div className="beneficiaire-choisi">
+                    <div>
+                      <strong>{nomComplet(beneficiaire)}</strong>
+                      <span>@{beneficiaire.username}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="lien-changer"
+                      onClick={() => {
+                        setBeneficiaire(null)
+                        reinitialiserDemande()
+                      }}
+                    >
+                      Changer
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <label className="champ">
+                      <span>Rechercher par nom ou pseudo</span>
+                      <input
+                        type="search"
+                        placeholder="Ex. : Alice, @alice.martin"
+                        value={recherche}
+                        onChange={(e) => setRecherche(e.target.value)}
+                        aria-controls="liste-beneficiaires"
+                      />
+                    </label>
+
+                    {erreurAnnuaire ? (
+                      <p className="liste-beneficiaires-vide" role="alert">
+                        {erreurAnnuaire}
+                      </p>
+                    ) : resultats.length === 0 ? (
+                      <p className="liste-beneficiaires-vide">
+                        {annuaire.length === 0
+                          ? 'Aucun autre client pour le moment.'
+                          : 'Aucun client ne correspond à cette recherche.'}
+                      </p>
+                    ) : (
+                      <ul id="liste-beneficiaires" className="liste-beneficiaires">
+                        {resultats.map((u) => (
+                          <li key={u.id}>
+                            <button type="button" onClick={() => choisirBeneficiaire(u)}>
+                              <strong>{nomComplet(u)}</strong>
+                              <span>@{u.username}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )
+              )}
+
+              {mode === 'iban' && (
+                <label className="champ">
+                  <span>IBAN du destinataire</span>
+                  <input
+                    type="text"
+                    placeholder="FR76 0000 0000 0000 0000 0000 000"
+                    value={formaterIban(destinataire)}
+                    onChange={(e) => {
+                      setDestinataire(e.target.value.replace(/\s/g, ''))
+                      reinitialiserDemande()
+                    }}
+                    maxLength={42}
+                    required
+                  />
+                </label>
+              )}
+            </fieldset>
+
+            {erreur && !modaleOuverte && (
+              <p role="alert" style={{ color: '#dc2626' }}>
+                {erreur}
+              </p>
+            )}
 
             <label className="champ">
               <span>
@@ -205,7 +360,7 @@ function Transfert() {
             <h2>Transfert envoyé</h2>
             <p>
               {formaterMontant(Number(montant))} ont été envoyés à{' '}
-              {formaterIban(destinataire)}.
+              {libelleDestinataire}.
             </p>
 
             <div className="actions-transfert">
@@ -253,7 +408,7 @@ function Transfert() {
         <dl className="recap">
           <div>
             <dt>À</dt>
-            <dd>{formaterIban(destinataire)}</dd>
+            <dd>{libelleDestinataire}</dd>
           </div>
 
           {motif && (

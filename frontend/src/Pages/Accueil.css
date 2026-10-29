@@ -108,3 +108,52 @@
     font-size: 36px;
   }
 }
+
+/* IBAN du compte, à transmettre pour recevoir un virement */
+.carte-solde-iban {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+
+  > span:first-child {
+    opacity: 0.8;
+    letter-spacing: 0.12em;
+  }
+
+  code {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 14px;
+    word-break: break-word;
+  }
+
+  button {
+    padding: 2px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--blanc);
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+
+  /* annonce « copié » pour les lecteurs d'écran, invisible à l'écran */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
