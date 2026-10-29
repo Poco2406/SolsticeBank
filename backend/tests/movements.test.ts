@@ -156,5 +156,32 @@ describe("Opérations et historique", () => {
             const incomplete = await registerMinimal(app);
             expect((await request(app).get("/api/movements").set("Authorization", incomplete.auth)).status).toBe(403);
         });
+
+        test("virement : chacun voit l'autre partie (données publiques), dépôt sans correspondant", async () => {
+            const alice = await registerWithProfile(app, "alice");
+            const bob = await registerWithProfile(app, "bob");
+            await operation(alice, "deposits", 1000);
+
+            const transfer = await request(app)
+                .post("/api/transfers")
+                .set("Authorization", alice.auth)
+                .set("Idempotency-Key", randomUUID())
+                .send({ recipientId: bob.id, amountCents: 2500 });
+            expect(transfer.status).toBe(201);
+
+            const aliceList = await request(app).get("/api/movements").set("Authorization", alice.auth);
+            const [debit, deposit] = aliceList.body.items;
+            expect(debit).toMatchObject({ type: "transfer_debit", counterparty: { id: bob.id, username: "bob" } });
+            expect(Object.keys(debit.counterparty).sort()).toEqual(["firstName", "id", "lastName", "username"]);
+            expect(deposit).toMatchObject({ type: "deposit", counterparty: null });
+
+            const bobList = await request(app).get("/api/movements").set("Authorization", bob.auth);
+            const credit = bobList.body.items[0];
+            expect(credit).toMatchObject({ type: "transfer_credit", counterparty: { id: alice.id, username: "alice" } });
+
+            const detail = await request(app).get(`/api/movements/${credit.id}`).set("Authorization", bob.auth);
+            expect(detail.body.counterparty).toMatchObject({ username: "alice" });
+            expect(JSON.stringify(bobList.body)).not.toMatch(/iban|email|phone/);
+        });
     });
 });

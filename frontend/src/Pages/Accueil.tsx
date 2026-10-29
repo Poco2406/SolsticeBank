@@ -5,7 +5,11 @@ import { useCompteur } from "../hooks/useCompteur";
 import {
   lireProfil,
   lireCompte,
+  listerMouvements,
+  decrireMouvement,
+  formaterMontant,
   messageErreur,
+  type Mouvement,
   type Profil,
   // type Genre,
 } from "../api.ts";
@@ -15,6 +19,7 @@ import "./Accueil.css";
  * Page d'accueil de l'utilisateur connecté.
  *  - Nom et civilité : GET /api/me (lireProfil)
  *  - Solde : GET /api/account (lireCompte, route de Jonathan)
+ *  - Dernières opérations : GET /api/movements?limit=5 (listerMouvements)
  * Le jeton est ajouté automatiquement par api.ts ; une session expirée
  * renvoie vers la page de connexion.
  */
@@ -39,6 +44,8 @@ function Accueil() {
   const [soldeVisible, setSoldeVisible] = useState(true);
   const [iban, setIban] = useState<string | null>(null);
   const [ibanCopie, setIbanCopie] = useState(false);
+  // null pendant le chargement ou si l'historique est indisponible
+  const [dernieres, setDernieres] = useState<Mouvement[] | null>(null);
 
   // Copie l'IBAN (sans espaces) pour le transmettre à quelqu'un.
   async function copierIban() {
@@ -66,6 +73,11 @@ function Accueil() {
         setIban(compte.iban);
       })
       .catch(() => {});
+
+    // 403 si le profil est incomplet : on garde simplement la liste vide.
+    listerMouvements({ limit: 5 })
+      .then(({ items }) => setDernieres(items))
+      .catch(() => setDernieres([]));
   }, []);
 
   return (
@@ -128,8 +140,38 @@ function Accueil() {
 
         <section className="encadre apparition">
           <h2>Dernières opérations</h2>
-          {/* TODO : listerMouvements({ limit: 5 }) quand la route de Jonathan existera */}
-          <p className="vide">Aucune opération pour le moment.</p>
+          {dernieres === null ? (
+            <p className="vide" role="status">Chargement…</p>
+          ) : dernieres.length === 0 ? (
+            <p className="vide">Aucune opération pour le moment.</p>
+          ) : (
+            <ul className="dernieres-operations">
+              {dernieres.map((m) => {
+                const { libelle, categorie, entree } = decrireMouvement(m);
+                return (
+                  <li key={m.id}>
+                    <span className="dernieres-texte">
+                      <span>{libelle}</span>
+                      <small>
+                        {categorie} ·{" "}
+                        {new Date(m.createdAt).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </small>
+                    </span>
+                    <span className={`dernieres-montant ${entree ? "entree" : ""}`}>
+                      {entree ? "+ " : "− "}
+                      {formaterMontant(m.amountCents)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link to="/historique" className="lien-historique">
+            Tout l'historique →
+          </Link>
         </section>
       </main>
     </div>

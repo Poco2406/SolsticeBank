@@ -1,91 +1,49 @@
-import { useState } from 'react'
-// import { useEffect } from 'react' // ← à décommenter pour l'étape 3 (voir plus bas)
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Entete from '../components/Entete'
 import Modale from '../components/Modale'
+import {
+  decrireMouvement,
+  listerTousMouvements,
+  messageErreur,
+  type Mouvement,
+} from '../api'
 import './Historique.css'
 
 /*
- * ============================================================================
- *  BRANCHER CETTE PAGE SUR LA BASE DE DONNÉES
- * ============================================================================
- *
- *  Le frontend ne parle JAMAIS directement à la base de données (ce serait
- *  une faille de sécurité : les identifiants de la base seraient visibles dans
- *  le navigateur). Le chemin est toujours :
- *
- *      Page React  ──fetch──▶  API du backend  ──requête SQL──▶  Base de données
- *                  ◀──JSON───                  ◀────lignes──────
- *
- *  Ce que l'équipe backend doit fournir
- *  ------------------------------------
- *  Une route qui renvoie les opérations du client connecté, par exemple :
- *
- *      GET /api/operations
- *
- *  Réponse attendue (un tableau JSON, au format du type `Operation` ci-dessous) :
- *
- *      [
- *        { "id": 1, "date": "2026-10-27T14:30:00", "libelle": "Carrefour",
- *          "categorie": "Courses", "montant": -54.32 },
- *        ...
- *      ]
- *
- *  Le backend identifie le client grâce à sa session (cookie ou jeton reçu à
- *  la connexion) : la page n'envoie donc PAS l'id du client dans l'URL,
- *  sinon n'importe qui pourrait lire les opérations d'un autre client.
- *
- *  Étapes côté frontend
- *  --------------------
- *  1. Dans vite.config.ts, rediriger /api vers le backend pendant le
- *     développement (évite les erreurs CORS) :
- *
- *        server: {
- *          proxy: { '/api': 'http://localhost:3000' }, // ← port du backend
- *        },
- *
- *  2. Dans le composant, remplacer
- *        const [operations] = useState<Operation[]>([])
- *     par
- *        const [operations, setOperations] = useState<Operation[]>([])
- *        const [chargement, setChargement] = useState(true)
- *        const [erreur, setErreur] = useState('')
- *
- *  3. Décommenter `import { useEffect }` en haut du fichier et ajouter dans
- *     le composant :
- *
- *        useEffect(() => {
- *          fetch('/api/operations', { credentials: 'include' })
- *            .then((reponse) => {
- *              if (!reponse.ok) throw new Error(`Erreur ${reponse.status}`)
- *              return reponse.json()
- *            })
- *            .then((donnees: Operation[]) => setOperations(donnees))
- *            .catch(() => setErreur('Impossible de charger vos opérations.'))
- *            .finally(() => setChargement(false))
- *        }, [])
- *
- *  4. Dans le JSX, juste avant la liste, afficher l'état du chargement :
- *
- *        {chargement && <p className="liste-vide">Chargement…</p>}
- *        {erreur && <p className="liste-vide">{erreur}</p>}
- *
- *  Tout le reste (totaux, filtres, recherche, regroupement par jour, détail)
- *  se met à jour tout seul à partir de `operations`.
- *
- *  Si le backend renvoie des noms de champs différents (ex. `amount` au lieu
- *  de `montant`), convertir dans le second `.then(...)` avec un `.map(...)`
- *  plutôt que de modifier le reste de la page.
- * ============================================================================
+ * Historique du compte : dépôts, retraits et virements (GET /api/movements).
+ * Les mouvements de l'API sont convertis au format `Operation` de la page :
+ * totaux, filtres, recherche et regroupement par jour restent inchangés.
  */
 
 // Format d'une opération tel que la page l'attend
 type Operation = {
-  id: number
-  date: string // format ISO : '2026-10-27T14:30:00'
+  id: string
+  date: string // heure locale : '2026-10-27T14:30:00'
   libelle: string
   categorie: string
-  montant: number // positif = entrée d'argent, négatif = sortie
+  montant: number // en euros : positif = entrée d'argent, négatif = sortie
+  soldeApres: number // en euros
+}
+
+// Date ISO UTC de l'API → heure locale sans fuseau, pour que le
+// regroupement par jour suive le jour vu par l'utilisateur (pas l'UTC).
+function dateLocale(iso: string) {
+  const d = new Date(iso)
+  const deux = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${deux(d.getMonth() + 1)}-${deux(d.getDate())}T${deux(d.getHours())}:${deux(d.getMinutes())}:${deux(d.getSeconds())}`
+}
+
+function versOperation(m: Mouvement): Operation {
+  const { libelle, categorie, entree } = decrireMouvement(m)
+  return {
+    id: m.id,
+    date: dateLocale(m.createdAt),
+    libelle,
+    categorie,
+    montant: ((entree ? 1 : -1) * m.amountCents) / 100,
+    soldeApres: m.balanceAfterCents / 100,
+  }
 }
 
 type Filtre = 'tout' | 'entrees' | 'sorties'
@@ -121,11 +79,19 @@ function formaterHeure(date: string) {
 }
 
 function Historique() {
-  // Liste vide tant que le backend n'est pas branché (voir étape 2 plus haut)
-  const [operations] = useState<Operation[]>([])
+  const [operations, setOperations] = useState<Operation[]>([])
+  const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState('')
   const [filtre, setFiltre] = useState<Filtre>('tout')
   const [recherche, setRecherche] = useState('')
   const [selection, setSelection] = useState<Operation | null>(null)
+
+  useEffect(() => {
+    listerTousMouvements()
+      .then((mouvements) => setOperations(mouvements.map(versOperation)))
+      .catch((err) => setErreur(messageErreur(err)))
+      .finally(() => setChargement(false))
+  }, [])
 
   const totalEntrees = operations
     .filter((op) => op.montant > 0)
@@ -204,8 +170,16 @@ function Historique() {
         </section>
 
         <section className="liste apparition">
-          {jours.length === 0 ? (
-            <p className="liste-vide">Aucune opération trouvée.</p>
+          {chargement ? (
+            <p className="liste-vide" role="status">Chargement de vos opérations…</p>
+          ) : erreur ? (
+            <p className="liste-vide" role="alert">{erreur}</p>
+          ) : jours.length === 0 ? (
+            <p className="liste-vide">
+              {operations.length === 0
+                ? 'Aucune opération pour le moment.'
+                : 'Aucune opération trouvée.'}
+            </p>
           ) : (
             jours.map(([jour, ops]) => (
               <div key={jour} className="jour">
@@ -279,6 +253,10 @@ function Historique() {
               <div>
                 <dt>Type</dt>
                 <dd>{selection.montant > 0 ? 'Entrée' : 'Sortie'}</dd>
+              </div>
+              <div>
+                <dt>Solde après</dt>
+                <dd>{formaterMontant(selection.soldeApres)}</dd>
               </div>
             </dl>
             <button
