@@ -201,6 +201,38 @@ export type Mouvement = {
   amountCents: number
   balanceAfterCents: number
   createdAt: string // date ISO
+  // Autre partie d'un virement (null pour un dépôt ou un retrait)
+  counterparty?: UtilisateurPublic | null
+}
+
+// Texte d'une ligne d'historique, commun à l'Historique et à l'Accueil.
+// `entree` : l'argent arrive sur le compte (dépôt, virement reçu).
+export function decrireMouvement(m: Mouvement): { libelle: string; categorie: string; entree: boolean } {
+  const autre = m.counterparty
+  const nom = autre
+    ? [autre.firstName, autre.lastName].filter(Boolean).join(' ') || `@${autre.username}`
+    : 'un client'
+  switch (m.type) {
+    case 'deposit':
+      return { libelle: 'Dépôt', categorie: 'Dépôt', entree: true }
+    case 'withdrawal':
+      return { libelle: 'Retrait', categorie: 'Retrait', entree: false }
+    case 'transfer_debit':
+      return { libelle: `Virement à ${nom}`, categorie: 'Virement envoyé', entree: false }
+    case 'transfer_credit':
+      return { libelle: `Virement de ${nom}`, categorie: 'Virement reçu', entree: true }
+  }
+}
+
+// Historique complet, page par page (100 par page, limite du back).
+export async function listerTousMouvements(maxPages = 10): Promise<Mouvement[]> {
+  const tous: Mouvement[] = []
+  for (let page = 1; page <= maxPages; page++) {
+    const { items, total } = await listerMouvements({ page, limit: 100 })
+    tous.push(...items)
+    if (tous.length >= total || items.length === 0) break
+  }
+  return tous
 }
 
 export type Transaction = {
