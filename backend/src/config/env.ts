@@ -24,7 +24,7 @@ export const env = {
     isProduction: process.env.NODE_ENV === 'production',
     frontendUrl: required('FRONTEND_URL'),
     mongodbUri: required('MONGODB_URI'),
-    mongodbTestUri: required('MONGODB_TEST_URI'),
+    mongodbTestUri: process.env.MONGODB_TEST_URI ?? '',
     jwtSecret: required('JWT_SECRET'),
     jwtExpiresIn: required('JWT_EXPIRES_IN'),
     mailTransport,
