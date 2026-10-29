@@ -279,6 +279,16 @@ export function demanderReinitialisation(email: string) {
   })
 }
 
+// Jeton reçu par email (lien /reset-password?token=…). Succès : toutes les
+// sessions ouvertes sont invalidées, il faut se reconnecter.
+export function reinitialiserMotDePasse(token: string, password: string) {
+  return api<{ message: string }>('/auth/password/reset', {
+    method: 'POST',
+    body: { token, password },
+    auth: false,
+  })
+}
+
 // ---------- Profil et annuaire ----------
 
 export const lireProfil = () => api<Profil>('/me')

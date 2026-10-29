@@ -3,18 +3,30 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import logoSolstice from '../assets/SolsticeBank.png'
+import { demanderReinitialisation, messageErreur } from '../api'
 import './MotDePasseOublie.css'
 
 function MotDePasseOublie() {
   const [email, setEmail] = useState('')
   const [messageEnvoye, setMessageEnvoye] = useState(false)
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState('')
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  // POST /api/auth/password/forgot : la réponse est la même que le compte
+  // existe ou non (on ne révèle pas quels emails sont inscrits).
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-
-    // Simulation frontend uniquement
-    // Aucun email n'est envoyé pour le moment
-    setMessageEnvoye(true)
+    setErreur('')
+    setEnvoi(true)
+    try {
+      await demanderReinitialisation(email)
+      setMessageEnvoye(true)
+    } catch (err) {
+      // ex. trop de demandes (5 par quart d'heure), serveur injoignable
+      setErreur(messageErreur(err))
+    } finally {
+      setEnvoi(false)
+    }
   }
 
   return (
@@ -60,8 +72,14 @@ function MotDePasseOublie() {
                 />
               </div>
 
-              <button type="submit" className="oubli-submit">
-                Envoyer le lien
+              {erreur && (
+                <p className="oubli-erreur" role="alert">
+                  {erreur}
+                </p>
+              )}
+
+              <button type="submit" className="oubli-submit" disabled={envoi}>
+                {envoi ? 'Envoi…' : 'Envoyer le lien'}
               </button>
             </form>
           ) : (
@@ -69,6 +87,7 @@ function MotDePasseOublie() {
               <h2>Demande enregistrée</h2>
               <p>
                 Si un compte est associé à cette adresse e-mail, vous recevrez un lien vous permettant de réinitialiser votre mot de passe.
+                Le lien est valable 30 minutes ; pensez à vérifier vos courriers indésirables.
               </p>
               <button
                 type="button"
