@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth.js";
+import { requireBankingActive } from "../middlewares/requireBankingActive.js";
 import * as accounts from "../services/account.service.js";
 import { z } from "zod";
 import { validateBody } from "../middlewares/validate.js";
 import { requireIdempotencyKey } from "../middlewares/requireIdempotencyKey.js";
 import * as operations from "../services/operation.service.js";
-import * as movementService from "../services/movement.service.js";
+import { notFound } from "../errors/AppError.js";
 
 export const accountRouter = Router();
 
@@ -13,14 +14,12 @@ export const accountRouter = Router();
 accountRouter.use(requireAuth);
 
 // Récupérer le compte bancaire de l'utilisateur connecté
+// (consultable même sans profil complet : le tableau de bord affiche le solde)
 accountRouter.get("/", async (req, res) => {
     const account = await accounts.getByOwnerId(req.userId!);
 
     if (!account) {
-        res.status(404).json({
-            message: "Aucun compte bancaire trouvé.",
-        });
-        return;
+        throw notFound("Aucun compte bancaire trouvé.");
     }
 
     res.status(200).json({ account });
@@ -34,6 +33,7 @@ const amountSchema = z.object({
 // Déposer de l'argent
 accountRouter.post(
     "/deposits",
+    requireBankingActive,
     requireIdempotencyKey,
     validateBody(amountSchema),
     async (req, res) => {
@@ -44,13 +44,14 @@ accountRouter.post(
             res.locals.idempotencyKey as string,
         );
 
-        res.status(201).json(result);
+        res.status(201).json(operations.toOperationResponse(result));
     },
 );
 
 // Retirer de l'argent
 accountRouter.post(
     "/withdrawals",
+    requireBankingActive,
     requireIdempotencyKey,
     validateBody(amountSchema),
     async (req, res) => {
@@ -61,18 +62,8 @@ accountRouter.post(
             res.locals.idempotencyKey as string,
         );
 
-        res.status(201).json(result);
+        res.status(201).json(operations.toOperationResponse(result));
     },
 );
 
-
-accountRouter.get("/movements", async (req, res) => {
-    const movements = await movementService.getByOwnerId(
-        req.userId!,
-    );
-
-    res.status(200).json({
-        movements,
-        count: movements.length,
-    });
-});
+// L'historique est servi par GET /api/movements (movements.routes.ts).

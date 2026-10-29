@@ -71,8 +71,7 @@ const accountSchema = new Schema(
     { timestamps: true },
 );
 
-accountSchema.index({ ownerId: 1 }, { unique: true });
-accountSchema.index({ iban: 1 }, { unique: true });
+// Les index uniques sur ownerId et iban sont déclarés sur les champs (unique: true).
 
 export type AccountDoc = InferSchemaType<typeof accountSchema>;
 export const Account = model("Account", accountSchema);

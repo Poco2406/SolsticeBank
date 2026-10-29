@@ -4,12 +4,12 @@ import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireBankingActive } from "../middlewares/requireBankingActive.js";
 import { badRequest } from "../errors/AppError.js";
 import { amountCentsSchema, assertObjectId, civilDateSchema } from "../validation/common.js";
-import { getMovement, listMovements } from "../services/movement.service.js";
+import { MOVEMENT_TYPES, getMovement, listMovements } from "../services/movement.service.js";
 
 // Paramètres d'URL : tout arrive en chaîne, d'où z.coerce pour les nombres.
 const listQuerySchema = z
     .object({
-        type: z.enum(["deposit", "withdrawal"]).optional(),
+        type: z.enum(MOVEMENT_TYPES).optional(),
         from: civilDateSchema.optional(),
         to: civilDateSchema.optional(),
         minAmountCents: z.coerce.number().pipe(amountCentsSchema).optional(),

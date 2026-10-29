@@ -30,11 +30,7 @@ export async function sendEmail({
     throw new Error("Configuration SMTP manquante.");
   }
 
-  const from = process.env.SMTP_FROM;
-
-  if (!from) {
-    throw new Error("SMTP_FROM est obligatoire en mode SMTP.");
-  }
+  const from = smtp.from;
 
   const transporter = nodemailer.createTransport({
     host: smtp.host,
@@ -53,7 +49,7 @@ export async function sendEmail({
   text,
 });
 
-if (process.env.NODE_ENV !== "production") {
+if (!env.isProduction) {
   console.log("Email accepté par le serveur SMTP Alwaysdata");
   console.log("Message ID :", info.messageId);
   console.log("Destinataires acceptés :", info.accepted);

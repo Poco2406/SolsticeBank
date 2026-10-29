@@ -5,6 +5,7 @@ import { Account } from "../models/Account.js";
 import { Operation } from "../models/Operation.js";
 import { Movement } from "../models/Movement.js";
 import { AppError } from "../errors/AppError.js";
+import { toMovementResponse } from "./movement.service.js";
 
 type OperationType = "deposit" | "withdrawal";
 
@@ -16,6 +17,24 @@ function conflict(message: string): AppError {
 
 function notFound(message: string): AppError {
     return new AppError(404, "NOT_FOUND", message);
+}
+
+type OperationResult = NonNullable<Awaited<ReturnType<typeof getPreviousResult>>>;
+
+// Réponse publique : ni idempotencyKey, ni requestFingerprint, ni __v.
+export function toOperationResponse({ operation, movement, balanceCents }: OperationResult) {
+    return {
+        operation: {
+            id: String(operation._id),
+            accountId: String(operation.accountId),
+            type: operation.type,
+            amountCents: operation.amountCents,
+            balanceAfterCents: operation.balanceAfterCents,
+            createdAt: operation.createdAt,
+        },
+        movement: toMovementResponse(movement),
+        balanceCents,
+    };
 }
 
 function fingerprint(
@@ -105,11 +124,7 @@ export async function execute(
     const session = await mongoose.startSession();
 
     try {
-        let result: {
-            operation: unknown;
-            movement: unknown;
-            balanceCents: number;
-        } | null = null;
+        let result: Awaited<ReturnType<typeof getPreviousResult>> = null;
 
         await session.withTransaction(async () => {
             // Vérification supplémentaire à l'intérieur de la transaction.
@@ -178,7 +193,9 @@ export async function execute(
 
             if (!updatedAccount) {
                 if (type === "withdrawal") {
-                    throw conflict(
+                    throw new AppError(
+                        409,
+                        "INSUFFICIENT_FUNDS",
                         "Solde insuffisant pour effectuer ce retrait.",
                     );
                 }
