@@ -5,48 +5,29 @@ import { useNavigate } from 'react-router-dom'
 import logoSolstice from '../assets/SolsticeBank.png'
 import './Connexion.css'
 import { Link } from 'react-router-dom'
+import { connecter, messageErreur } from '../api'
 
 function Connexion() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
   const [afficherMotDePasse, setAfficherMotDePasse] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [envoi, setEnvoi] = useState(false)
 
-  
-async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-  e.preventDefault()
-
-  try {
-    const response = await fetch('http://localhost:3000/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password: motDePasse,
-      }),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      alert(data.error?.message ?? 'Identifiants incorrects.')
-      return
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setErreur(null)
+    setEnvoi(true)
+    try {
+      await connecter(email, motDePasse) // le jeton est enregistré par api.ts
+      navigate('/accueil')
+    } catch (err) {
+      setErreur(messageErreur(err)) // ex. « Email ou mot de passe incorrect. »
+    } finally {
+      setEnvoi(false)
     }
-
-    if (!data.token) {
-      alert('Aucun jeton de connexion reçu.')
-      return
-    }
-
-    sessionStorage.setItem('solsticeToken', data.token)
-    navigate('/accueil')
-  } catch {
-    alert('Impossible de contacter le serveur.')
   }
-}
-
 
   return (
     <main className="connexion-page">
@@ -119,8 +100,14 @@ async function handleSubmit(e: FormEvent<HTMLFormElement>) {
               </Link>
             </div>
 
-            <button type="submit" className="connexion-submit">
-              Se connecter
+            {erreur && (
+              <p className="connexion-error" role="alert">
+                {erreur}
+              </p>
+            )}
+
+            <button type="submit" className="connexion-submit" disabled={envoi}>
+              {envoi ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
 
