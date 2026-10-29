@@ -6,6 +6,7 @@ import Historique from './Pages/Historique'
 import './App.css'
 import Inscription from './Pages/Inscription'
 import MotDePasseOublie from './Pages/MotDePasseOublie'
+import Profil from './Pages/Profil'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/accueil" element={<Accueil />} />
         <Route path="/transfert" element={<Transfert />} />
         <Route path="/historique" element={<Historique />} />
+        <Route path="/profil" element={<Profil />} />
         <Route path="*" element={<h1>Page introuvable</h1>} />
         <Route path="/inscription" element={<Inscription />} />
         <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />

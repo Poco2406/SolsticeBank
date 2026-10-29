@@ -220,3 +220,20 @@
     text-decoration: underline;
   }
 }
+
+/* Bandeau pour un compte sans profil complet */
+.alerte-profil {
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--lavande);
+  color: var(--violet-fonce);
+  font-size: 14px;
+  text-align: center;
+
+  a {
+    font-weight: 600;
+  }
+}

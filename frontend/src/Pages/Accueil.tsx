@@ -93,6 +93,15 @@ function Accueil() {
           </p>
         )}
 
+        {/* Compte créé sans profil : les fonctions bancaires sont bloquées (403) */}
+        {profil && !profil.profileComplete && (
+          <p className="alerte-profil" role="status">
+            Votre profil est incomplet : complétez-le pour accéder aux
+            virements, dépôts, retraits et à l'historique.{" "}
+            <Link to="/profil">Compléter mon profil</Link>
+          </p>
+        )}
+
         <section className="carte-solde apparition">
           <p className="carte-solde-titre">Solde du compte</p>
           <p
