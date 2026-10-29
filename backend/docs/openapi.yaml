@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SOLSTICE BANK API
-  version: 0.7.0
+  version: 0.8.0
   description: >
     API de la banque fictive SOLSTICE BANK (projet EFREI, module Full Stack JS).
     Tous les montants sont des entiers en centimes (12345 = 123,45 €).
@@ -1015,6 +1015,13 @@ components:
         createdAt:
           type: string
           format: date-time
+        counterparty:
+          description: >
+            Autre partie d'un virement (destinataire pour un débit, expéditeur pour un crédit),
+            données publiques uniquement. null pour un dépôt ou un retrait.
+            Renvoyé par GET /api/movements et GET /api/movements/{id}.
+          nullable: true
+          allOf: [{ $ref: "#/components/schemas/PublicUser" }]
 
     MovementList:
       type: object
