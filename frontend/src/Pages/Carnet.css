@@ -1,0 +1,211 @@
+/* Carnet budgétaire : reprend la mise en page et la liste de l'Historique */
+
+.carnet-resume {
+  grid-template-columns: repeat(3, 1fr);
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.carnet .outils {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.carnet-ajouter {
+  white-space: nowrap;
+}
+
+/* Message de succès discret ; invisible quand il est vide */
+.carnet-annonce {
+  min-height: 0;
+  color: var(--violet-fonce);
+  font-size: 14px;
+  text-align: center;
+
+  &:empty {
+    display: none;
+  }
+}
+
+/* ---------- Ligne : contenu cliquable + boutons Modifier / Supprimer ---------- */
+
+.carnet-ligne {
+  display: flex;
+  align-items: center;
+
+  .operation {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.carnet-ligne-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  padding-right: 12px;
+
+  button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--violet);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--lavande);
+      outline: none;
+    }
+
+    &.danger {
+      color: #b91c1c;
+
+      &:hover,
+      &:focus-visible {
+        background: #fef2f2;
+      }
+    }
+  }
+}
+
+/* Sur mobile, les boutons passent sous la ligne */
+@media (max-width: 600px) {
+  .carnet-ligne {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .carnet-ligne-actions {
+    justify-content: flex-end;
+    padding: 0 12px 10px;
+  }
+}
+
+/* ---------- Formulaire (modale) ---------- */
+
+.carnet-formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Choix Dépense / Revenu sous forme de deux boutons */
+.carnet-type {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--lavande);
+
+  label {
+    padding: 10px;
+    border-radius: 9px;
+    color: var(--gris-texte);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+
+    &.actif {
+      background: var(--blanc);
+      color: var(--violet);
+      box-shadow: var(--ombre);
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--violet);
+      outline-offset: 2px;
+    }
+  }
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.carnet-champs-ligne {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.carnet-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  span {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--blanc-casse);
+    color: var(--gris-fonce);
+    font: inherit;
+    font-size: 16px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--violet);
+      background: var(--blanc);
+      box-shadow: 0 0 0 4px var(--lavande);
+    }
+  }
+}
+
+.carnet-erreur {
+  padding: 12px;
+  border-radius: 9px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.carnet-chargement,
+.carnet-confirmation {
+  color: var(--gris-texte);
+  text-align: center;
+}
+
+.carnet-actions {
+  display: flex;
+  gap: 12px;
+
+  > * {
+    flex: 1;
+  }
+
+  button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.bouton-danger {
+  background: #b91c1c;
+
+  &:hover {
+    background: #991b1b;
+  }
+}

@@ -7,6 +7,7 @@ import './App.css'
 import Inscription from './Pages/Inscription'
 import MotDePasseOublie from './Pages/MotDePasseOublie'
 import Profil from './Pages/Profil'
+import Carnet from './Pages/Carnet'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/transfert" element={<Transfert />} />
         <Route path="/historique" element={<Historique />} />
         <Route path="/profil" element={<Profil />} />
+        <Route path="/carnet" element={<Carnet />} />
         <Route path="*" element={<h1>Page introuvable</h1>} />
         <Route path="/inscription" element={<Inscription />} />
         <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />

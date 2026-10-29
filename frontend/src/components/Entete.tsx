@@ -19,6 +19,9 @@ function Entete() {
         <img src={logoSolstice} alt="Solstice Bank" className="logo-image" />
       </Link>
       <nav className="entete-actions" aria-label="Compte">
+        <NavLink to="/carnet" className="lien-profil">
+          Carnet
+        </NavLink>
         <NavLink to="/profil" className="lien-profil">
           Mon profil
         </NavLink>
