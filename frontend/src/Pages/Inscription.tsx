@@ -1,9 +1,11 @@
 
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import logoSolstice from '../assets/SolsticeBank.png'
 import './Inscription.css'
+import { inscrire, messageErreur } from '../api'
+import type { Genre } from '../api'
 
 type FormData = {
   firstName: string
@@ -75,7 +77,8 @@ function estMajeur(dateTexte: string): boolean {
 function Inscription() {
   const [form, setForm] = useState<FormData>(initialForm)
   const [erreur, setErreur] = useState('')
-  const [confirmation, setConfirmation] = useState(false)
+  const [envoi, setEnvoi] = useState(false)
+  const navigate = useNavigate()
   const [afficherMotDePasse, setAfficherMotDePasse] = useState(false)
 
   // Date maximale pour avoir au moins 18 ans
@@ -96,24 +99,22 @@ function Inscription() {
     }))
 
     setErreur('')
-    setConfirmation(false)
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErreur('')
-    setConfirmation(false)
 
     if (!form.firstName.trim() || !form.lastName.trim()) {
       setErreur('Veuillez renseigner votre prénom et votre nom.')
       return
     }
 
-    if (
-      form.username.trim().length < 3 ||
-      form.username.trim().length > 30
-    ) {
-      setErreur('Le pseudo doit contenir entre 3 et 30 caractères.')
+    // Même règle que le backend
+    if (!/^[a-zA-Z0-9._-]{3,30}$/.test(form.username.trim())) {
+      setErreur(
+        'Le pseudo doit contenir entre 3 et 30 caractères : lettres, chiffres, . _ -',
+      )
       return
     }
 
@@ -122,7 +123,7 @@ function Inscription() {
       return
     }
 
-    if (!/^\+[1-9]\d{1,14}$/.test(form.phone.trim())) {
+    if (!/^\+[1-9]\d{6,14}$/.test(form.phone.trim())) {
       setErreur('Utilisez un numéro international, ex. +33612345678.')
       return
     }
@@ -171,8 +172,30 @@ function Inscription() {
       return
     }
 
-    // Frontend uniquement : aucun compte n'est créé
-    setConfirmation(true)
+    setEnvoi(true)
+    try {
+      // Le jeton est enregistré par api.ts : l'utilisateur est connecté
+      await inscrire(form.email.trim(), form.password, {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        username: form.username.trim(),
+        gender: form.gender as Genre,
+        birthDate: form.birthDate,
+        phone: form.phone.trim(),
+        address: {
+          street: form.street.trim(),
+          complement: form.complement.trim() || null,
+          postalCode: form.postalCode.trim(),
+          city: form.city.trim(),
+          country: form.country.trim(),
+        },
+      })
+      navigate('/accueil')
+    } catch (err) {
+      setErreur(messageErreur(err)) // ex. « Cet email est déjà utilisé. »
+    } finally {
+      setEnvoi(false)
+    }
   }
 
   return (
@@ -222,7 +245,7 @@ function Inscription() {
                   />
                 </div>
 
-                {/* <div className="inscription-field">
+                <div className="inscription-field">
                   <label htmlFor="username">Pseudo *</label>
                   <input
                     id="username"
@@ -231,11 +254,13 @@ function Inscription() {
                     onChange={handleChange}
                     minLength={3}
                     maxLength={30}
+                    pattern="[a-zA-Z0-9._\-]{3,30}"
                     placeholder="3 à 30 caractères"
                     autoComplete="username"
                     required
                   />
-                </div>*/}
+                  <small>Lettres, chiffres, point, tiret et tiret bas. Visible dans l'annuaire.</small>
+                </div>
 
                 <div className="inscription-field">
                   <label htmlFor="gender">Genre</label>
@@ -424,15 +449,8 @@ function Inscription() {
               </p>
             )}
 
-            {confirmation && (
-              <p className="inscription-success" role="status">
-                Formulaire valide ! Ceci est une démonstration :
-                aucun compte n'a encore été créé.
-              </p>
-            )}
-
-            <button className="inscription-submit" type="submit">
-              Créer mon compte
+            <button className="inscription-submit" type="submit" disabled={envoi}>
+              {envoi ? 'Création du compte…' : 'Créer mon compte'}
             </button>
 
             <p className="inscription-login">
