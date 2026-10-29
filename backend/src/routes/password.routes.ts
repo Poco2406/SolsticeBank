@@ -3,7 +3,7 @@ import { z } from "zod";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { createHash } from "node:crypto";
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 
 import { User } from "../models/User.js";
 import { AuthToken } from "../models/AuthToken.js";
