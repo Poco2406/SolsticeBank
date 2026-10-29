@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { createHash } from "node:crypto";
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { User } from "../models/User.js";
