@@ -145,6 +145,9 @@ function Accueil() {
           <Link to="/historique" className="bouton bouton-secondaire">
             Voir l'historique
           </Link>
+          <Link to="/carnet" className="bouton bouton-secondaire">
+            Mon carnet
+          </Link>
         </section>
 
         <section className="encadre apparition">
